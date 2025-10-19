@@ -4,9 +4,10 @@ import { Presentation, Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, Eye, Plus, ArrowLeft, GripVertical } from "lucide-react";
+import { Download, Eye, Plus, ArrowLeft, GripVertical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { exportToPDF, exportToPPTX } from "@/utils/exportPresentation";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
@@ -22,6 +23,7 @@ const Editor = () => {
   const [generatingImages, setGeneratingImages] = useState<Set<string>>(new Set());
   const [isPreview, setIsPreview] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (!presentation) {
@@ -155,8 +157,25 @@ const Editor = () => {
     setDraggedIndex(null);
   };
 
-  const handleExport = (format: 'pdf' | 'pptx') => {
-    toast.info(`Экспорт в ${format.toUpperCase()} будет добавлен в следующей версии`);
+  const handleExport = async (format: 'pdf' | 'pptx') => {
+    if (!presentation) return;
+    
+    setIsExporting(true);
+    
+    try {
+      if (format === 'pptx') {
+        await exportToPPTX(presentation);
+      } else {
+        await exportToPDF(presentation);
+      }
+      
+      toast.success(`Презентация экспортирована в ${format.toUpperCase()}`);
+    } catch (error: any) {
+      console.error('Error exporting:', error);
+      toast.error(error.message || "Ошибка экспорта");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (!presentation) return null;
@@ -198,16 +217,18 @@ const Editor = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleExport('pdf')}
+                disabled={isExporting}
               >
-                <Download className="h-4 w-4 mr-2" />
+                {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
                 PDF
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleExport('pptx')}
+                disabled={isExporting}
               >
-                <Download className="h-4 w-4 mr-2" />
+                {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
                 PPTX
               </Button>
             </div>
@@ -230,7 +251,7 @@ const Editor = () => {
                     />
                   </div>
                 )}
-                <div className="prose prose-lg max-w-none text-foreground">
+                <div className="prose prose-lg max-w-none text-foreground whitespace-pre-wrap">
                   <ReactMarkdown
                     remarkPlugins={[remarkMath, remarkGfm]}
                     rehypePlugins={[rehypeKatex]}
