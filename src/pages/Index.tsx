@@ -14,19 +14,39 @@ const Index = () => {
 
   const handleGeneratePresentation = async (config: PresentationConfig) => {
     setIsGenerating(true);
+    setLoadingPhrases(undefined); // Reset to defaults first
+    
+    // Start phrases generation in background (non-blocking)
+    const generatePhrases = async () => {
+      try {
+        const { data: phrasesData } = await supabase.functions.invoke('generate-loading-phrases', {
+          body: { subject: config.subject, topic: config.topic }
+        });
+
+        if (phrasesData?.phrases && phrasesData.phrases.length > 0) {
+          console.log('Custom phrases loaded:', phrasesData.phrases);
+          setLoadingPhrases(phrasesData.phrases);
+        } else {
+          console.log('No phrases in response, retrying...');
+          // Retry once
+          const { data: retryData } = await supabase.functions.invoke('generate-loading-phrases', {
+            body: { subject: config.subject, topic: config.topic }
+          });
+          if (retryData?.phrases && retryData.phrases.length > 0) {
+            setLoadingPhrases(retryData.phrases);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to generate custom phrases:', error);
+        // Keep using default phrases
+      }
+    };
+
+    // Start phrases generation without waiting
+    generatePhrases();
     
     try {
-      // Generate custom loading phrases first
-      const { data: phrasesData } = await supabase.functions.invoke('generate-loading-phrases', {
-        body: { subject: config.subject, topic: config.topic }
-      });
-
-      // Set custom phrases if available
-      if (phrasesData?.phrases) {
-        setLoadingPhrases(phrasesData.phrases);
-      }
-
-      // Then generate presentation
+      // Generate presentation
       const { data, error } = await supabase.functions.invoke('generate-presentation', {
         body: config
       });
