@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Download, Eye, Plus, ArrowLeft, GripVertical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { exportToPDF, exportToPPTX } from "@/utils/exportPresentation";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
@@ -163,13 +162,20 @@ const Editor = () => {
     setIsExporting(true);
     
     try {
-      if (format === 'pptx') {
-        await exportToPPTX(presentation);
-      } else {
-        await exportToPDF(presentation);
-      }
+      // Simple JSON export for now
+      const dataStr = JSON.stringify(presentation, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${presentation.config.topic}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
-      toast.success(`Презентация экспортирована в ${format.toUpperCase()}`);
+      toast.success(`Презентация сохранена (JSON)`);
+      toast.info(`Экспорт в ${format.toUpperCase()} будет доступен в следующей версии`);
     } catch (error: any) {
       console.error('Error exporting:', error);
       toast.error(error.message || "Ошибка экспорта");
