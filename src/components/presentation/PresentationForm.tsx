@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PresentationConfig } from "@/types/presentation";
-import { Sparkles, ChevronDown } from "lucide-react";
+import { Sparkles, ChevronDown, Settings } from "lucide-react";
 
 interface PresentationFormProps {
   onSubmit: (config: PresentationConfig) => void;
@@ -132,10 +132,11 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full justify-between p-4 border border-border rounded-lg hover:bg-muted"
+                className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
               >
-                <span className="text-sm font-medium">Дополнительные параметры (опционально)</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
+                <Settings className="h-4 w-4" />
+                <span className="text-sm">Дополнительные параметры</span>
+                <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 mt-4">
