@@ -21,7 +21,7 @@ const SUBJECTS = [
 ];
 
 const STYLES = [
-  { value: "минимализм", label: "Минимализм" },
+  { value: "минимализм", label: "Сказочный" },
   { value: "скетч", label: "Скетч" },
   { value: "реализм", label: "Реализм" },
   { value: "комикс", label: "Комикс" },

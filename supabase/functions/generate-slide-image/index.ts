@@ -24,14 +24,14 @@ serve(async (req) => {
     // Формируем финальный промпт с учетом стиля
     const styleDescriptions = {
       'минимализм': 'fairy tale style, warm and colorful in the manner of Thomas Kinkade, cozy glowing lights, magical atmosphere, dreamy enchanted feeling, vibrant warm colors, soft illumination',
-      'скетч': 'watercolor and marker style, artistic loose brushstrokes, flowing colors, hand-painted feeling, expressive ink lines, vibrant watercolor washes, sketch-like artistic quality',
+      'скетч': 'light watercolor and marker style, soft pastel colors, gentle brushstrokes, airy and pleasant atmosphere, delicate ink lines, luminous watercolor washes, bright and cheerful artistic quality',
       'реализм': 'photorealistic, no artifacts, extremely high detail, crystal clear, sharp focus, natural accurate lighting, true-to-life rendering, professional photography quality',
       'комикс': 'comic book style with visual metaphors, bold vibrant colors, dynamic composition, strong outlines, expressive symbolic imagery, pop art energy, graphic novel aesthetic',
       '3D-мультфильм': 'Pixar style 3D animation, highly colorful and vibrant, volumetric depth, soft rounded shapes, glossy materials, cinematic lighting, playful detailed rendering'
     };
 
     const styleModifier = styleDescriptions[style as keyof typeof styleDescriptions] || 'educational, clean, modern';
-    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. 16:9 aspect ratio. CRITICAL: NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS on the image. Pure visual elements only: icons, shapes, diagrams, illustrations, symbols. Focus on visual metaphors and imagery, not text.`;
+    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. CRITICAL: 16:9 aspect ratio, horizontal orientation, wide format. NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS on the image. Pure visual elements only: icons, shapes, diagrams, illustrations, symbols. Focus on visual metaphors and imagery, not text.`;
 
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
