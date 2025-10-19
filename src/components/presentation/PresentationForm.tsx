@@ -38,7 +38,7 @@ const FORMATS = [
 
 export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps) => {
   const [config, setConfig] = useState<PresentationConfig>({
-    subject: "",
+    subject: "Математика",
     grade: 5,
     topic: "",
     style: "комикс",

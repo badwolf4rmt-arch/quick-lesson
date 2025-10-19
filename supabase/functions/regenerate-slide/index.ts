@@ -16,9 +16,9 @@ serve(async (req) => {
     
     console.log('Regenerating slide:', { slideIndex, currentTitle: currentSlide.title });
 
-    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY is not configured');
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+    if (!OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY is not configured');
     }
 
     const systemPrompt = `Ты опытный методист и педагог, который создаёт презентации для школьных уроков на русском языке.
@@ -82,48 +82,49 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
 
 Верни JSON с полями: title (строка), content (строка с markdown), imagePrompt (описание для генерации изображения на русском)`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://lovable.dev',
+        'X-Title': 'Slide Regenerator'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'openai/gpt-4.1-mini-2025-04-14',
         max_tokens: 4000,
-        system: systemPrompt,
         messages: [
-          {
-            role: 'user',
-            content: userPrompt
-          }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
         tools: [
           {
-            name: "regenerate_slide",
-            description: "Перегенерировать один слайд презентации",
-            input_schema: {
-              type: "object",
-              properties: {
-                title: {
-                  type: "string",
-                  description: "Заголовок слайда"
+            type: "function",
+            function: {
+              name: "regenerate_slide",
+              description: "Перегенерировать один слайд презентации",
+              parameters: {
+                type: "object",
+                properties: {
+                  title: {
+                    type: "string",
+                    description: "Заголовок слайда"
+                  },
+                  content: {
+                    type: "string",
+                    description: "Содержание слайда с форматированием markdown"
+                  },
+                  imagePrompt: {
+                    type: "string",
+                    description: "Описание для генерации изображения"
+                  }
                 },
-                content: {
-                  type: "string",
-                  description: "Содержание слайда с форматированием markdown"
-                },
-                imagePrompt: {
-                  type: "string",
-                  description: "Описание для генерации изображения"
-                }
-              },
-              required: ["title", "content", "imagePrompt"]
+                required: ["title", "content", "imagePrompt"]
+              }
             }
           }
         ],
-        tool_choice: { type: "tool", name: "regenerate_slide" }
+        tool_choice: { type: "function", function: { name: "regenerate_slide" } }
       }),
     });
 
@@ -147,19 +148,19 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
 
     const data = await response.json();
     
-    if (!data.content || !data.content[0]) {
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Invalid AI response structure:', JSON.stringify(data));
       throw new Error('Invalid response from AI');
     }
     
-    const toolUse = data.content.find((block: any) => block.type === 'tool_use');
+    const toolCalls = data.choices[0].message.tool_calls;
     
-    if (!toolUse?.input) {
-      console.error('No tool use in response:', JSON.stringify(data.content));
+    if (!toolCalls || !toolCalls[0]?.function?.arguments) {
+      console.error('No tool calls in response:', JSON.stringify(data.choices[0].message));
       throw new Error('No slide data in response');
     }
 
-    const slideData = toolUse.input;
+    const slideData = JSON.parse(toolCalls[0].function.arguments);
     console.log('Slide regenerated successfully');
 
     return new Response(

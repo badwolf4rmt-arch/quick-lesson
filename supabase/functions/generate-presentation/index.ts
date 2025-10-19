@@ -118,8 +118,8 @@ ${mainText ? `Основной текст для использования:\n${
         'X-Title': 'Presentation Generator'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5-mini-2025-08-07',
-        max_completion_tokens: 8000,
+        model: 'openai/gpt-4.1-mini-2025-04-14',
+        max_tokens: 8000,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt + '\n\nВерни ответ строго в формате JSON как указано в системном промпте.' }

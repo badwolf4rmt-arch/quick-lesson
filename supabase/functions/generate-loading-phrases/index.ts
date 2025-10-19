@@ -14,42 +14,47 @@ serve(async (req) => {
   try {
     const { subject, topic } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+    if (!OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY is not configured');
     }
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://lovable.dev',
+        'X-Title': 'Loading Phrases Generator'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'openai/gpt-4.1-mini-2025-04-14',
+        max_tokens: 1000,
         messages: [
           {
             role: 'user',
-            content: `Создай ровно 8 коротких прикольных фраз для анимации загрузки презентации по теме "${subject}: ${topic}". 
+            content: `Создай ровно 15 коротких прикольных фраз для анимации загрузки презентации по теме "${subject}: ${topic}". 
 
 КРИТИЧЕСКИ ВАЖНО:
-- Фразы должны быть забавными, игривыми, с эмодзи
+- Фразы должны быть забавными, игривыми, с разными эмодзи (все эмодзи должны правильно отображаться)
 - Каждая фраза связана с темой урока
 - Короткие (до 50 символов каждая)
 - Мотивирующие и позитивные
+- Используй разнообразные эмодзи для каждой фразы (🎨, ✨, 🚀, 💡, 🌟, 🎉, 📚, 🧠, 💫, 🔥, 🎯, ⚡, 🌈, 🎭, 🎪)
 
-ВЕРНИ СТРОГО В ЭТОМ ФОРМАТЕ (только JSON массив, без текста до и после):
-{"phrases": ["фраза 1", "фраза 2", "фраза 3", "фраза 4", "фраза 5", "фраза 6", "фраза 7", "фраза 8"]}
+ВЕРНИ СТРОГО В ЭТОМ ФОРМАТЕ (только JSON, без markdown кода):
+{"phrases": ["фраза 1", "фраза 2", "фраза 3", "фраза 4", "фраза 5", "фраза 6", "фраза 7", "фраза 8", "фраза 9", "фраза 10", "фраза 11", "фраза 12", "фраза 13", "фраза 14", "фраза 15"]}
 
 Пример для темы "Математика: Дроби":
-{"phrases": ["🧮 Делю целое на части...", "🍕 Режу пиццу на доли...", "✨ Считаю дробные чудеса...", "🎯 Превращаю числа в дроби...", "🔢 Складываю половинки...", "💫 Упрощаю дробные магии...", "🎨 Рисую дробные узоры...", "🚀 Дроби готовы к взлету!"]}`
+{"phrases": ["🧮 Делю целое на части...", "🍕 Режу пиццу на доли...", "✨ Считаю дробные чудеса...", "🎯 Превращаю числа в дроби...", "🔢 Складываю половинки...", "💫 Упрощаю дробные магии...", "🎨 Рисую дробные узоры...", "🚀 Дроби готовы к взлету!", "💡 Понимаю части целого...", "🌟 Дробная магия близко!", "🎪 Цирк дробных чисел!", "⚡ Молниеносные дроби!", "🌈 Радуга из долей!", "🎭 Дробная драма!", "🔥 Дроби на максимум!"]}`
           }
         ]
       }),
     });
 
     if (!response.ok) {
-      console.error('API error:', response.status);
+      const errorText = await response.text();
+      console.error('API error:', response.status, errorText);
       // Fallback to default phrases
       return new Response(
         JSON.stringify({
@@ -59,6 +64,16 @@ serve(async (req) => {
             "🧠 AI думает...",
             "📚 Собираю материал...",
             "🚀 Почти готово...",
+            "💡 Идеи формируются...",
+            "🌟 Создаю волшебство...",
+            "🎯 Подбираю контент...",
+            "⚡ Энергия творчества...",
+            "🌈 Краски готовы...",
+            "🎪 Шоу начинается...",
+            "🔥 Разгоняю процессор...",
+            "💫 Магия в процессе...",
+            "🎭 Готовлю сюрприз...",
+            "📖 Пишу историю..."
           ]
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -116,6 +131,16 @@ serve(async (req) => {
           "🧠 AI думает...",
           "📚 Собираю материал...",
           "🚀 Почти готово...",
+          "💡 Идеи формируются...",
+          "🌟 Создаю волшебство...",
+          "🎯 Подбираю контент...",
+          "⚡ Энергия творчества...",
+          "🌈 Краски готовы...",
+          "🎪 Шоу начинается...",
+          "🔥 Разгоняю процессор...",
+          "💫 Магия в процессе...",
+          "🎭 Готовлю сюрприз...",
+          "📖 Пишу историю..."
         ]
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
