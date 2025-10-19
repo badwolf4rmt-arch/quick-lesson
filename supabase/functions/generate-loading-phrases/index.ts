@@ -69,7 +69,20 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    
+    console.log('Full API response:', JSON.stringify(data, null, 2));
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid response structure');
+      throw new Error('Invalid response structure');
+    }
+    
     let content = data.choices[0].message.content;
+    
+    if (!content || content.trim() === '') {
+      console.error('Empty content from API');
+      throw new Error('Empty content from API');
+    }
     
     console.log('Raw API response:', content);
     
@@ -82,12 +95,17 @@ serve(async (req) => {
     try {
       const parsed = JSON.parse(content);
       console.log('Successfully parsed:', parsed);
+      
+      if (!parsed.phrases || !Array.isArray(parsed.phrases) || parsed.phrases.length === 0) {
+        throw new Error('Invalid phrases structure');
+      }
+      
       return new Response(
         JSON.stringify(parsed),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (parseError) {
-      console.error('Failed to parse response:', content);
+      console.error('Failed to parse response:', content, 'Error:', parseError);
       throw parseError;
     }
   } catch (error) {
