@@ -8,6 +8,3 @@ verify_jwt = false
 
 [functions.regenerate-slide]
 verify_jwt = false
-
-[functions.export-presentation]
-verify_jwt = false
