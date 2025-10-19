@@ -24,9 +24,9 @@ serve(async (req) => {
     // Формируем финальный промпт с учетом стиля
     const styleDescriptions = {
       'минимализм': 'minimalist, clean, simple shapes, geometric, modern, flat design',
-      'школьная тетрадь': 'notebook paper, hand-drawn, sketch style, educational, doodle',
-      'официальный': 'professional, corporate, clean, formal, business presentation style',
-      'комикс': 'comic book style, colorful, dynamic, cartoon, illustration',
+      'скетч': 'sketch style, hand-drawn, pencil drawing, artistic, loose lines, hatching',
+      'реализм': 'photorealistic, detailed, natural lighting, high detail, realistic rendering',
+      'комикс': 'comic book style, colorful, dynamic, cartoon, illustration, bold outlines',
       '3D-мультфильм': '3D rendered, Pixar style, colorful, playful, animated movie look'
     };
 

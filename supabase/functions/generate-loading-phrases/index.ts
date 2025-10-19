@@ -67,15 +67,25 @@ serve(async (req) => {
     const data = await response.json();
     let content = data.choices[0].message.content;
     
+    console.log('Raw API response:', content);
+    
     // Remove markdown code blocks if present
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
-    const parsed = JSON.parse(content);
+    console.log('Cleaned content:', content);
     
-    return new Response(
-      JSON.stringify(parsed),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    // Try to parse, if fails return default
+    try {
+      const parsed = JSON.parse(content);
+      console.log('Successfully parsed:', parsed);
+      return new Response(
+        JSON.stringify(parsed),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (parseError) {
+      console.error('Failed to parse response:', content);
+      throw parseError;
+    }
   } catch (error) {
     console.error('Error generating phrases:', error);
     // Fallback to default phrases

@@ -17,22 +17,19 @@ const Index = () => {
     
     try {
       // Generate custom loading phrases first
-      const phrasesPromise = supabase.functions.invoke('generate-loading-phrases', {
+      const { data: phrasesData } = await supabase.functions.invoke('generate-loading-phrases', {
         body: { subject: config.subject, topic: config.topic }
       });
 
-      // Start both requests in parallel
-      const [phrasesResult, presentationResult] = await Promise.all([
-        phrasesPromise,
-        supabase.functions.invoke('generate-presentation', { body: config })
-      ]);
-
       // Set custom phrases if available
-      if (phrasesResult.data?.phrases) {
-        setLoadingPhrases(phrasesResult.data.phrases);
+      if (phrasesData?.phrases) {
+        setLoadingPhrases(phrasesData.phrases);
       }
 
-      const { data, error } = presentationResult;
+      // Then generate presentation
+      const { data, error } = await supabase.functions.invoke('generate-presentation', {
+        body: config
+      });
 
       if (error) {
         console.error('Edge function error:', error);
