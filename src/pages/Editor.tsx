@@ -23,6 +23,8 @@ const Editor = () => {
   );
   const [generatingImages, setGeneratingImages] = useState<Set<string>>(new Set());
   const [regeneratingSlides, setRegeneratingSlides] = useState<Set<string>>(new Set());
+  const [imageLoadingPhrases, setImageLoadingPhrases] = useState<{[key: string]: string[]}>({});
+  const [slideLoadingPhrases, setSlideLoadingPhrases] = useState<{[key: string]: string[]}>({});
   const [isPreview, setIsPreview] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -71,6 +73,15 @@ const Editor = () => {
     
     setGeneratingImages(prev => new Set(prev).add(slideId));
     
+    // Generate loading phrases in background
+    supabase.functions.invoke('generate-loading-phrases', {
+      body: { subject: "Генерация изображения", topic: prompt.slice(0, 100) }
+    }).then(({ data }) => {
+      if (data?.phrases) {
+        setImageLoadingPhrases(prev => ({ ...prev, [slideId]: data.phrases }));
+      }
+    }).catch(() => {});
+    
     try {
       const { data, error } = await supabase.functions.invoke('generate-slide-image', {
         body: { 
@@ -91,7 +102,6 @@ const Editor = () => {
 
       const imageUrl = data.imageUrl;
       
-      // Используем функциональное обновление для корректной работы с асинхронными операциями
       setPresentation(prev => {
         if (!prev) return prev;
         const newSlides = prev.slides.map(slide =>
@@ -110,6 +120,11 @@ const Editor = () => {
         newSet.delete(slideId);
         return newSet;
       });
+      setImageLoadingPhrases(prev => {
+        const newPhrases = { ...prev };
+        delete newPhrases[slideId];
+        return newPhrases;
+      });
     }
   };
 
@@ -120,6 +135,16 @@ const Editor = () => {
     if (slideIndex === -1) return;
 
     setRegeneratingSlides(prev => new Set(prev).add(slideId));
+    
+    // Generate loading phrases in background
+    const currentSlide = presentation.slides[slideIndex];
+    supabase.functions.invoke('generate-loading-phrases', {
+      body: { subject: presentation.config.subject, topic: currentSlide.title }
+    }).then(({ data }) => {
+      if (data?.phrases) {
+        setSlideLoadingPhrases(prev => ({ ...prev, [slideId]: data.phrases }));
+      }
+    }).catch(() => {});
     
     try {
       const { data, error } = await supabase.functions.invoke('regenerate-slide', {
@@ -160,6 +185,11 @@ const Editor = () => {
         const newSet = new Set(prev);
         newSet.delete(slideId);
         return newSet;
+      });
+      setSlideLoadingPhrases(prev => {
+        const newPhrases = { ...prev };
+        delete newPhrases[slideId];
+        return newPhrases;
       });
     }
   };
@@ -323,6 +353,8 @@ const Editor = () => {
                   isGeneratingImage={generatingImages.has(slide.id)}
                   isRegeneratingSlide={regeneratingSlides.has(slide.id)}
                   style={presentation.config.style}
+                  imageLoadingPhrases={imageLoadingPhrases[slide.id]}
+                  slideLoadingPhrases={slideLoadingPhrases[slide.id]}
                 />
               </div>
             ))}

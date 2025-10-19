@@ -14,22 +14,19 @@ serve(async (req) => {
   try {
     const { subject, topic } = await req.json();
 
-    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
-    if (!OPENROUTER_API_KEY) {
-      throw new Error('OPENROUTER_API_KEY is not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://lovable.dev',
-        'X-Title': 'Presentation Generator'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5-mini-2025-08-07',
-        max_completion_tokens: 300,
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'user',
@@ -41,7 +38,7 @@ serve(async (req) => {
 - Короткие (до 50 символов каждая)
 - Мотивирующие и позитивные
 
-ВЕРНИ СТРОГО В ЭТОМ ФОРМАТЕ (только JSON, без текста до и после):
+ВЕРНИ СТРОГО В ЭТОМ ФОРМАТЕ (только JSON массив, без текста до и после):
 {"phrases": ["фраза 1", "фраза 2", "фраза 3", "фраза 4", "фраза 5", "фраза 6", "фраза 7", "фраза 8"]}
 
 Пример для темы "Математика: Дроби":

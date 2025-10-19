@@ -22,6 +22,8 @@ interface SlideEditorProps {
   isGeneratingImage: boolean;
   isRegeneratingSlide: boolean;
   style: string;
+  imageLoadingPhrases?: string[];
+  slideLoadingPhrases?: string[];
 }
 
 export const SlideEditor = ({
@@ -32,7 +34,9 @@ export const SlideEditor = ({
   onRegenerateSlide,
   isGeneratingImage,
   isRegeneratingSlide,
-  style
+  style,
+  imageLoadingPhrases,
+  slideLoadingPhrases
 }: SlideEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedSlide, setEditedSlide] = useState(slide);
@@ -71,7 +75,7 @@ export const SlideEditor = ({
   if (isRegeneratingSlide) {
     return (
       <Card className="p-6 space-y-4 shadow-card">
-        <AILoader text="Перегенерация слайда..." />
+        <AILoader customPhrases={slideLoadingPhrases} text="Перегенерация слайда..." />
       </Card>
     );
   }
@@ -144,7 +148,7 @@ export const SlideEditor = ({
         <div className="space-y-4">
           {isGeneratingImage ? (
             <div className="aspect-video rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
-              <AILoader text="Генерация изображения..." className="py-8" />
+              <AILoader customPhrases={imageLoadingPhrases} text="Генерация изображения..." className="py-8" />
             </div>
           ) : slide.imageUrl ? (
             <div className="relative aspect-video rounded-lg overflow-hidden bg-muted group">

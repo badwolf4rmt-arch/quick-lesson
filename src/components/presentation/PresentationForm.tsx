@@ -38,14 +38,12 @@ const FORMATS = [
 
 export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps) => {
   const [config, setConfig] = useState<PresentationConfig>({
-    subject: "Математика",
+    subject: "",
     grade: 5,
     topic: "",
-    style: "минимализм",
+    style: "комикс",
     format: "теория-практика",
     slideCount: 10,
-    additionalPrompt: "",
-    mainText: ""
   });
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
