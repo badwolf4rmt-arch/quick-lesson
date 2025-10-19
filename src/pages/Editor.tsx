@@ -8,6 +8,10 @@ import { Download, Eye, Plus, ArrowLeft, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 const Editor = () => {
   const location = useLocation();
@@ -227,7 +231,12 @@ const Editor = () => {
                   </div>
                 )}
                 <div className="prose prose-lg max-w-none text-foreground">
-                  <ReactMarkdown>{slide.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkMath, remarkGfm]}
+                    rehypePlugins={[rehypeKatex]}
+                  >
+                    {slide.content}
+                  </ReactMarkdown>
                 </div>
               </Card>
             ))}

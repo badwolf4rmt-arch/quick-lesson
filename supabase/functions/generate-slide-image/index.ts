@@ -31,7 +31,7 @@ serve(async (req) => {
     };
 
     const styleModifier = styleDescriptions[style as keyof typeof styleDescriptions] || 'educational, clean, modern';
-    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. 16:9 aspect ratio.`;
+    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. 16:9 aspect ratio. ВАЖНО: минимум текста на изображении, если текст - то только на русском языке.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

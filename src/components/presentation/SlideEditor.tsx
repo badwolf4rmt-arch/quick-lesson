@@ -4,8 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Image, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Image, RefreshCw, Trash2, Upload, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { toast } from "sonner";
 
 interface SlideEditorProps {
@@ -105,7 +109,12 @@ export const SlideEditor = ({
             />
           ) : (
             <div className="prose prose-sm max-w-none text-foreground">
-              <ReactMarkdown>{slide.content}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkMath, remarkGfm]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {slide.content}
+              </ReactMarkdown>
             </div>
           )}
 
@@ -123,12 +132,25 @@ export const SlideEditor = ({
 
         <div className="space-y-4">
           {slide.imageUrl ? (
-            <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+            <div className="relative aspect-video rounded-lg overflow-hidden bg-muted group">
               <img
                 src={slide.imageUrl}
                 alt={slide.title}
                 className="w-full h-full object-cover"
               />
+              <Button
+                size="sm"
+                variant="destructive"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => {
+                  const updatedSlide = { ...editedSlide, imageUrl: undefined };
+                  setEditedSlide(updatedSlide);
+                  onUpdate(updatedSlide);
+                  toast.success("Изображение удалено");
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           ) : (
             <div className="aspect-video rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">

@@ -5,8 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PresentationConfig } from "@/types/presentation";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ChevronDown } from "lucide-react";
 
 interface PresentationFormProps {
   onSubmit: (config: PresentationConfig) => void;
@@ -46,6 +47,8 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
     additionalPrompt: "",
     mainText: ""
   });
+
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,42 +115,6 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="style">Стиль оформления</Label>
-              <Select
-                value={config.style}
-                onValueChange={(value) => setConfig({ ...config, style: value })}
-              >
-                <SelectTrigger id="style">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-popover">
-                  {STYLES.map(style => (
-                    <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="format">Формат подачи</Label>
-              <Select
-                value={config.format}
-                onValueChange={(value) => setConfig({ ...config, format: value })}
-              >
-                <SelectTrigger id="format">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-popover">
-                  {FORMATS.map(format => (
-                    <SelectItem key={format.value} value={format.value}>{format.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="slideCount">Количество слайдов</Label>
             <Input
@@ -160,27 +127,77 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="additionalPrompt">Дополнительные требования</Label>
-            <Textarea
-              id="additionalPrompt"
-              placeholder="Например: для объяснения новой темы, с акцентом на практические примеры"
-              value={config.additionalPrompt}
-              onChange={(e) => setConfig({ ...config, additionalPrompt: e.target.value })}
-              rows={2}
-            />
-          </div>
+          <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full justify-between p-4 border border-border rounded-lg hover:bg-muted"
+              >
+                <span className="text-sm font-medium">Дополнительные параметры (опционально)</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="style">Стиль оформления</Label>
+                  <Select
+                    value={config.style}
+                    onValueChange={(value) => setConfig({ ...config, style: value })}
+                  >
+                    <SelectTrigger id="style">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {STYLES.map(style => (
+                        <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="mainText">Основной текст (опционально)</Label>
-            <Textarea
-              id="mainText"
-              placeholder="Можете вставить основной текст урока для увеличения достоверности"
-              value={config.mainText}
-              onChange={(e) => setConfig({ ...config, mainText: e.target.value })}
-              rows={4}
-            />
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="format">Формат подачи</Label>
+                  <Select
+                    value={config.format}
+                    onValueChange={(value) => setConfig({ ...config, format: value })}
+                  >
+                    <SelectTrigger id="format">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {FORMATS.map(format => (
+                        <SelectItem key={format.value} value={format.value}>{format.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="additionalPrompt">Дополнительные требования</Label>
+                <Textarea
+                  id="additionalPrompt"
+                  placeholder="Например: для объяснения новой темы, с акцентом на практические примеры"
+                  value={config.additionalPrompt}
+                  onChange={(e) => setConfig({ ...config, additionalPrompt: e.target.value })}
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mainText">Основной текст</Label>
+                <Textarea
+                  id="mainText"
+                  placeholder="Можете вставить основной текст урока для увеличения достоверности"
+                  value={config.mainText}
+                  onChange={(e) => setConfig({ ...config, mainText: e.target.value })}
+                  rows={4}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <Button
             type="submit"

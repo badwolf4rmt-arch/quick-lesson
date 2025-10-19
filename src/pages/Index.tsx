@@ -48,10 +48,10 @@ const Index = () => {
             </div>
           </div>
           <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
-            AI Презентации для Учителей
+            AI-генератор презентаций
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Создавайте профессиональные образовательные презентации за минуты с помощью искусственного интеллекта
+            Создавайте презентации к уроку за несколько минут с помощью искусственного интеллекта
           </p>
         </div>
 
