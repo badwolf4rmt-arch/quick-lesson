@@ -19,7 +19,15 @@ const Index = () => {
         body: config
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || "Ошибка вызова функции генерации");
+      }
+
+      if (!data || !data.slides) {
+        console.error('Invalid response data:', data);
+        throw new Error("Некорректный ответ от сервера");
+      }
 
       const presentation: Presentation = {
         config,

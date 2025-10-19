@@ -137,7 +137,18 @@ ${mainText ? `Основной текст для использования:\n${
     }
 
     const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid AI response structure:', JSON.stringify(data));
+      throw new Error('Invalid response from AI');
+    }
+    
     const generatedContent = data.choices[0].message.content;
+    
+    if (!generatedContent) {
+      console.error('Empty content in AI response');
+      throw new Error('No content generated');
+    }
     
     console.log('Generated presentation structure');
 

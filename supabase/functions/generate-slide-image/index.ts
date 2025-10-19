@@ -70,9 +70,16 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid AI response structure:', JSON.stringify(data));
+      throw new Error('Invalid response from AI');
+    }
+    
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageUrl) {
+      console.error('No image URL in response:', JSON.stringify(data.choices[0].message));
       throw new Error('No image generated');
     }
 

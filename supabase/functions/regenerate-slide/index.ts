@@ -151,9 +151,16 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
     }
 
     const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid AI response structure:', JSON.stringify(data));
+      throw new Error('Invalid response from AI');
+    }
+    
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     
     if (!toolCall?.function?.arguments) {
+      console.error('No tool call in response:', JSON.stringify(data.choices[0].message));
       throw new Error('No slide data in response');
     }
 

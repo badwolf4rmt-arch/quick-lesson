@@ -79,7 +79,15 @@ const Editor = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || "Ошибка вызова функции генерации изображения");
+      }
+
+      if (!data || !data.imageUrl) {
+        console.error('Invalid response data:', data);
+        throw new Error("Некорректный ответ от сервера");
+      }
 
       const imageUrl = data.imageUrl;
       
@@ -122,7 +130,15 @@ const Editor = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || "Ошибка вызова функции перегенерации слайда");
+      }
+
+      if (!data || !data.title || !data.content) {
+        console.error('Invalid response data:', data);
+        throw new Error("Некорректный ответ от сервера");
+      }
 
       const regeneratedSlide = {
         ...presentation.slides[slideIndex],
