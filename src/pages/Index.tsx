@@ -4,39 +4,17 @@ import { PresentationForm } from "@/components/presentation/PresentationForm";
 import { PresentationConfig, Presentation } from "@/types/presentation";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { GraduationCap, Sparkles } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { AILoader } from "@/components/ui/ai-loader";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { mockPresentation } from "@/data/mockPresentation";
 
 const Index = () => {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [useAI, setUseAI] = useState(false);
 
   const handleGeneratePresentation = async (config: PresentationConfig) => {
     setIsGenerating(true);
     
     try {
-      // Если AI выключен, используем моковую презентацию
-      if (!useAI) {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Имитация загрузки
-        
-        const presentation: Presentation = {
-          ...mockPresentation,
-          config, // Обновляем конфиг на актуальный
-        };
-
-        toast.success("Презентация создана! Перехожу к редактору...");
-        
-        setTimeout(() => {
-          navigate("/editor", { state: { presentation } });
-        }, 500);
-        return;
-      }
-
-      // Реальная AI генерация
       const { data, error } = await supabase.functions.invoke('generate-presentation', {
         body: config
       });
@@ -91,42 +69,7 @@ const Index = () => {
             <AILoader />
           </div>
         ) : (
-          <div className="flex justify-center flex-col items-center gap-8">
-            <div className="w-full max-w-2xl">
-              <div className="p-6 rounded-xl bg-card border border-border shadow-card mb-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <Switch 
-                      id="ai-mode" 
-                      checked={useAI}
-                      onCheckedChange={setUseAI}
-                      className="data-[state=checked]:bg-primary"
-                    />
-                    <div className="flex-1">
-                      <Label 
-                        htmlFor="ai-mode" 
-                        className="text-base font-semibold cursor-pointer flex items-center gap-2"
-                      >
-                        <Sparkles className={`h-4 w-4 ${useAI ? 'text-primary' : 'text-muted-foreground'}`} />
-                        Использовать AI-генерацию
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {useAI ? (
-                          <span className="text-amber-600 dark:text-amber-500 font-medium">
-                            ⚠️ При использовании AI будут сниматься средства с AI-счета
-                          </span>
-                        ) : (
-                          <span>
-                            Демо-режим с примером презентации (бесплатно)
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
+          <div className="flex justify-center">
             <PresentationForm
               onSubmit={handleGeneratePresentation}
               isLoading={isGenerating}
