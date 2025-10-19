@@ -17,18 +17,20 @@ const LOADING_PHRASES = [
 interface AILoaderProps {
   text?: string;
   className?: string;
+  customPhrases?: string[];
 }
 
-export const AILoader = ({ text, className = "" }: AILoaderProps) => {
+export const AILoader = ({ text, className = "", customPhrases }: AILoaderProps) => {
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const phrases = customPhrases || LOADING_PHRASES;
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length);
+      setPhraseIndex((prev) => (prev + 1) % phrases.length);
     }, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [phrases.length]);
 
   return (
     <div className={`flex flex-col items-center justify-center gap-6 p-8 ${className}`}>
@@ -38,7 +40,7 @@ export const AILoader = ({ text, className = "" }: AILoaderProps) => {
       </div>
       <div className="text-center max-w-md">
         <p className="text-xl font-medium text-foreground animate-fade-in bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          {text || LOADING_PHRASES[phraseIndex]}
+          {text || phrases[phraseIndex]}
         </p>
       </div>
     </div>

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.regenerate-slide]
 verify_jwt = false
+
+[functions.generate-loading-phrases]
+verify_jwt = false

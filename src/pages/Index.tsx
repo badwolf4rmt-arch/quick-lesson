@@ -10,14 +10,29 @@ import { AILoader } from "@/components/ui/ai-loader";
 const Index = () => {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingPhrases, setLoadingPhrases] = useState<string[]>();
 
   const handleGeneratePresentation = async (config: PresentationConfig) => {
     setIsGenerating(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('generate-presentation', {
-        body: config
+      // Generate custom loading phrases first
+      const phrasesPromise = supabase.functions.invoke('generate-loading-phrases', {
+        body: { subject: config.subject, topic: config.topic }
       });
+
+      // Start both requests in parallel
+      const [phrasesResult, presentationResult] = await Promise.all([
+        phrasesPromise,
+        supabase.functions.invoke('generate-presentation', { body: config })
+      ]);
+
+      // Set custom phrases if available
+      if (phrasesResult.data?.phrases) {
+        setLoadingPhrases(phrasesResult.data.phrases);
+      }
+
+      const { data, error } = presentationResult;
 
       if (error) {
         console.error('Edge function error:', error);
@@ -66,7 +81,7 @@ const Index = () => {
 
         {isGenerating ? (
           <div className="flex justify-center py-20">
-            <AILoader />
+            <AILoader customPhrases={loadingPhrases} />
           </div>
         ) : (
           <div className="flex justify-center">
