@@ -31,7 +31,8 @@ serve(async (req) => {
     };
 
     const styleModifier = styleDescriptions[style as keyof typeof styleDescriptions] || 'educational, clean, modern';
-    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. 16:9 aspect ratio. ВАЖНО: минимум текста на изображении, если текст - то только на русском языке.`;
+    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. 16:9 aspect ratio. CRITICAL: NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS on the image. Pure visual elements only: icons, shapes, diagrams, illustrations, symbols. Focus on visual metaphors and imagery, not text.`;
+
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
