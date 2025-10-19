@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Slide } from "@/types/presentation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Image, RefreshCw, Trash2, Plus } from "lucide-react";
+import { Image, RefreshCw, Trash2, Upload } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
 interface SlideEditorProps {
   slide: Slide;
@@ -28,6 +29,7 @@ export const SlideEditor = ({
 }: SlideEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedSlide, setEditedSlide] = useState(slide);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     onUpdate(editedSlide);
@@ -37,6 +39,26 @@ export const SlideEditor = ({
   const handleCancel = () => {
     setEditedSlide(slide);
     setIsEditing(false);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error("Пожалуйста, выберите файл изображения");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string;
+      const updatedSlide = { ...editedSlide, imageUrl };
+      setEditedSlide(updatedSlide);
+      onUpdate(updatedSlide);
+      toast.success("Изображение загружено");
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -128,16 +150,35 @@ export const SlideEditor = ({
               />
             )}
             
-            <Button
-              onClick={() => onGenerateImage(slide.id, editedSlide.imagePrompt)}
-              disabled={isGeneratingImage}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              {slide.imageUrl ? "Перегенерировать" : "Сгенерировать"} изображение
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => onGenerateImage(slide.id, editedSlide.imagePrompt)}
+                disabled={isGeneratingImage}
+                variant="outline"
+                size="sm"
+                className="flex-1"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {slide.imageUrl ? "Перегенерировать" : "Сгенерировать"}
+              </Button>
+              
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                size="sm"
+                className="flex-1"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Загрузить
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
           </div>
         </div>
       </div>

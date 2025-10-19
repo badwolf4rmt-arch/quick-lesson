@@ -4,7 +4,7 @@ import { Presentation, Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, Eye, Plus, ArrowLeft } from "lucide-react";
+import { Download, Eye, Plus, ArrowLeft, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
@@ -17,6 +17,7 @@ const Editor = () => {
   );
   const [generatingImages, setGeneratingImages] = useState<Set<string>>(new Set());
   const [isPreview, setIsPreview] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!presentation) {
@@ -95,7 +96,59 @@ const Editor = () => {
   const handleRegenerateSlide = async (slideId: string) => {
     if (!presentation) return;
     
-    toast.info("Перегенерация содержания пока не реализована");
+    const slideIndex = presentation.slides.findIndex(s => s.id === slideId);
+    if (slideIndex === -1) return;
+
+    toast.info("Перегенерация слайда...");
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('regenerate-slide', {
+        body: { 
+          config: presentation.config,
+          slideIndex: slideIndex + 1,
+          currentSlide: presentation.slides[slideIndex]
+        }
+      });
+
+      if (error) throw error;
+
+      const regeneratedSlide = {
+        ...presentation.slides[slideIndex],
+        title: data.title,
+        content: data.content,
+        imagePrompt: data.imagePrompt
+      };
+      
+      const newSlides = [...presentation.slides];
+      newSlides[slideIndex] = regeneratedSlide;
+      
+      setPresentation({ ...presentation, slides: newSlides });
+      toast.success("Слайд перегенерирован");
+    } catch (error: any) {
+      console.error('Error regenerating slide:', error);
+      toast.error(error.message || "Ошибка перегенерации слайда");
+    }
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    const newSlides = [...presentation!.slides];
+    const draggedSlide = newSlides[draggedIndex];
+    newSlides.splice(draggedIndex, 1);
+    newSlides.splice(index, 0, draggedSlide);
+    
+    setPresentation({ ...presentation!, slides: newSlides });
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   const handleExport = (format: 'pdf' | 'pptx') => {
@@ -182,16 +235,27 @@ const Editor = () => {
         ) : (
           <div className="max-w-5xl mx-auto space-y-6">
             {presentation.slides.map((slide, index) => (
-              <SlideEditor
+              <div
                 key={slide.id}
-                slide={slide}
-                onUpdate={(updatedSlide) => handleUpdateSlide(index, updatedSlide)}
-                onDelete={() => handleDeleteSlide(index)}
-                onGenerateImage={handleGenerateImage}
-                onRegenerateSlide={handleRegenerateSlide}
-                isGeneratingImage={generatingImages.has(slide.id)}
-                style={presentation.config.style}
-              />
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`relative ${draggedIndex === index ? 'opacity-50' : ''}`}
+              >
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-8 cursor-move">
+                  <GripVertical className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <SlideEditor
+                  slide={slide}
+                  onUpdate={(updatedSlide) => handleUpdateSlide(index, updatedSlide)}
+                  onDelete={() => handleDeleteSlide(index)}
+                  onGenerateImage={handleGenerateImage}
+                  onRegenerateSlide={handleRegenerateSlide}
+                  isGeneratingImage={generatingImages.has(slide.id)}
+                  style={presentation.config.style}
+                />
+              </div>
             ))}
             
             <Button
