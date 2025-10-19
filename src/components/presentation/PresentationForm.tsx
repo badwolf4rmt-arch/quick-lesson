@@ -33,7 +33,7 @@ const FORMATS = [
   { value: "теория-практика", label: "Теория-практика" },
   { value: "сторителлинг", label: "Сторителлинг" },
   { value: "визуальные образы", label: "Визуальные образы" },
-  { value: "формализм", label: "Формализм" }
+  { value: "формальный", label: "Формальный" }
 ];
 
 export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps) => {

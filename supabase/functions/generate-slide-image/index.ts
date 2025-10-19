@@ -23,11 +23,11 @@ serve(async (req) => {
 
     // Формируем финальный промпт с учетом стиля
     const styleDescriptions = {
-      'минимализм': 'minimalist, clean, simple shapes, geometric, modern, flat design',
-      'скетч': 'sketch style, hand-drawn, pencil drawing, artistic, loose lines, hatching',
-      'реализм': 'photorealistic, detailed, natural lighting, high detail, realistic rendering',
-      'комикс': 'comic book style, colorful, dynamic, cartoon, illustration, bold outlines',
-      '3D-мультфильм': '3D rendered, Pixar style, colorful, playful, animated movie look'
+      'минимализм': 'fairy tale style, warm and colorful in the manner of Thomas Kinkade, cozy glowing lights, magical atmosphere, dreamy enchanted feeling, vibrant warm colors, soft illumination',
+      'скетч': 'watercolor and marker style, artistic loose brushstrokes, flowing colors, hand-painted feeling, expressive ink lines, vibrant watercolor washes, sketch-like artistic quality',
+      'реализм': 'photorealistic, no artifacts, extremely high detail, crystal clear, sharp focus, natural accurate lighting, true-to-life rendering, professional photography quality',
+      'комикс': 'comic book style with visual metaphors, bold vibrant colors, dynamic composition, strong outlines, expressive symbolic imagery, pop art energy, graphic novel aesthetic',
+      '3D-мультфильм': 'Pixar style 3D animation, highly colorful and vibrant, volumetric depth, soft rounded shapes, glossy materials, cinematic lighting, playful detailed rendering'
     };
 
     const styleModifier = styleDescriptions[style as keyof typeof styleDescriptions] || 'educational, clean, modern';
