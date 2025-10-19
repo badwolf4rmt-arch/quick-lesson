@@ -180,9 +180,9 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
     }
     
     let textElements = '';
-    let yPos = hasImage ? 3000000 : 1800000; // Start lower if there's an image
-    const fontSize = 1800; // 18pt
-    const lineHeight = 450000; // Spacing between lines
+    let yPos = hasImage ? 4200000 : 1800000; // Start lower if there's an image
+    const fontSize = 1400; // 14pt - уменьшил размер шрифта
+    const lineHeight = 550000; // Увеличил межстрочный интервал
     
     lines.forEach((line, lineIndex) => {
       const cleanLine = line.trim();
@@ -269,8 +269,8 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
           </p:nvSpPr>
           <p:spPr>
             <a:xfrm>
-              <a:off x="${hasImage ? '4800000' : '914400'}" y="${yPos}"/>
-              <a:ext cx="${hasImage ? '4000000' : '7315200'}" cy="400000"/>
+              <a:off x="${hasImage ? '4400000' : '914400'}" y="${yPos}"/>
+              <a:ext cx="${hasImage ? '4200000' : '7315200'}" cy="500000"/>
             </a:xfrm>
             <a:prstGeom prst="rect">
               <a:avLst/>
@@ -278,8 +278,8 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
             <a:noFill/>
           </p:spPr>
           <p:txBody>
-            <a:bodyPr wrap="square" rtlCol="0">
-              <a:spAutoFit/>
+            <a:bodyPr wrap="square" rtlCol="0" anchor="t">
+              <a:normAutofit/>
             </a:bodyPr>
             <a:lstStyle/>
             <a:p>
@@ -299,8 +299,8 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
           </p:nvSpPr>
           <p:spPr>
             <a:xfrm>
-              <a:off x="${hasImage ? '4800000' : '914400'}" y="${yPos}"/>
-              <a:ext cx="${hasImage ? '4000000' : '7315200'}" cy="400000"/>
+              <a:off x="${hasImage ? '4400000' : '914400'}" y="${yPos}"/>
+              <a:ext cx="${hasImage ? '4200000' : '7315200'}" cy="500000"/>
             </a:xfrm>
             <a:prstGeom prst="rect">
               <a:avLst/>
@@ -308,8 +308,8 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
             <a:noFill/>
           </p:spPr>
           <p:txBody>
-            <a:bodyPr wrap="square" rtlCol="0">
-              <a:spAutoFit/>
+            <a:bodyPr wrap="square" rtlCol="0" anchor="t">
+              <a:normAutofit/>
             </a:bodyPr>
             <a:lstStyle/>
             <a:p>
@@ -330,7 +330,7 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
       yPos += lineHeight;
     });
     
-    // Add image element if present
+    // Add image element if present (corrected aspect ratio)
     let imageElement = '';
     if (hasImage) {
       imageElement = `
@@ -344,6 +344,7 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
           </p:nvPicPr>
           <p:blipFill>
             <a:blip r:embed="rId1"/>
+            <a:srcRect/>
             <a:stretch>
               <a:fillRect/>
             </a:stretch>
@@ -351,7 +352,7 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
           <p:spPr>
             <a:xfrm>
               <a:off x="914400" y="1800000"/>
-              <a:ext cx="3600000" cy="2400000"/>
+              <a:ext cx="3200000" cy="2000000"/>
             </a:xfrm>
             <a:prstGeom prst="rect">
               <a:avLst/>
@@ -397,16 +398,16 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
         <p:spPr>
           <a:xfrm>
             <a:off x="914400" y="457200"/>
-            <a:ext cx="7315200" cy="1000000"/>
+            <a:ext cx="7315200" cy="1200000"/>
           </a:xfrm>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr/>
+          <a:bodyPr anchor="t"/>
           <a:lstStyle/>
           <a:p>
-            <a:pPr algn="l"/>
+            <a:pPr algn="l" marL="0" indent="0"/>
             <a:r>
-              <a:rPr lang="ru-RU" sz="3600" b="1" dirty="0">
+              <a:rPr lang="ru-RU" sz="3200" b="1" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="${colors.accent}"/>
                 </a:solidFill>
