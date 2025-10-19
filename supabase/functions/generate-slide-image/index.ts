@@ -16,9 +16,9 @@ serve(async (req) => {
     
     console.log('Generating image:', { prompt, style });
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+    if (!OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY is not configured');
     }
 
     // Формируем финальный промпт с учетом стиля
@@ -33,21 +33,19 @@ serve(async (req) => {
     const styleModifier = styleDescriptions[style as keyof typeof styleDescriptions] || 'educational, clean, modern';
     const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. 16:9 aspect ratio. ВАЖНО: минимум текста на изображении, если текст - то только на русском языке.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/images/generations', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://lovable.dev',
+        'X-Title': 'Presentation Generator'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          {
-            role: 'user',
-            content: finalPrompt
-          }
-        ],
-        modalities: ['image', 'text']
+        model: 'black-forest-labs/flux-1.1-pro',
+        prompt: finalPrompt,
+        n: 1,
+        size: '1024x576'
       }),
     });
 
@@ -71,22 +69,27 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    if (!data.data || !data.data[0]) {
       console.error('Invalid AI response structure:', JSON.stringify(data));
       throw new Error('Invalid response from AI');
     }
     
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const imageUrl = data.data[0].url || data.data[0].b64_json;
 
     if (!imageUrl) {
-      console.error('No image URL in response:', JSON.stringify(data.choices[0].message));
+      console.error('No image URL in response:', JSON.stringify(data));
       throw new Error('No image generated');
     }
+
+    // If base64, convert to data URL
+    const finalImageUrl = imageUrl.startsWith('data:') ? imageUrl : 
+                         imageUrl.startsWith('/') ? `data:image/png;base64,${imageUrl}` : 
+                         imageUrl;
 
     console.log('Image generated successfully');
 
     return new Response(
-      JSON.stringify({ imageUrl }),
+      JSON.stringify({ imageUrl: finalImageUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
