@@ -76,34 +76,6 @@ const Index = () => {
             />
           </div>
         )}
-
-        <div className="mt-16 max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-xl bg-card shadow-card border border-border">
-              <div className="text-3xl mb-3">🎯</div>
-              <h3 className="text-lg font-semibold mb-2 text-foreground">Точная настройка</h3>
-              <p className="text-sm text-muted-foreground">
-                Укажите предмет, класс, тему и стиль — AI создаст идеально подходящую презентацию
-              </p>
-            </div>
-            
-            <div className="p-6 rounded-xl bg-card shadow-card border border-border">
-              <div className="text-3xl mb-3">✏️</div>
-              <h3 className="text-lg font-semibold mb-2 text-foreground">Полный контроль</h3>
-              <p className="text-sm text-muted-foreground">
-                Редактируйте текст, изображения, добавляйте и удаляйте слайды в удобном редакторе
-              </p>
-            </div>
-            
-            <div className="p-6 rounded-xl bg-card shadow-card border border-border">
-              <div className="text-3xl mb-3">🚀</div>
-              <h3 className="text-lg font-semibold mb-2 text-foreground">Быстрый экспорт</h3>
-              <p className="text-sm text-muted-foreground">
-                Готовую презентацию можно скачать в PDF или PPTX формате одним кликом
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

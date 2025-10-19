@@ -34,7 +34,7 @@ export const AILoader = ({ text, className = "" }: AILoaderProps) => {
     <div className={`flex flex-col items-center justify-center gap-6 p-8 ${className}`}>
       <div className="relative">
         <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
-        <Sparkles className="h-16 w-16 text-primary relative animate-pulse" />
+        <Sparkles className="h-12 w-12 text-primary relative animate-pulse" />
       </div>
       <div className="text-center max-w-md">
         <p className="text-xl font-medium text-foreground animate-fade-in bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
