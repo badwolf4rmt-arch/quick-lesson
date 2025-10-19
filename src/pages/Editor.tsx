@@ -162,20 +162,37 @@ const Editor = () => {
     setIsExporting(true);
     
     try {
-      // Simple JSON export for now
-      const dataStr = JSON.stringify(presentation, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${presentation.config.topic}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      toast.success(`Презентация сохранена (JSON)`);
-      toast.info(`Экспорт в ${format.toUpperCase()} будет доступен в следующей версии`);
+      const { data, error } = await supabase.functions.invoke('export-presentation', {
+        body: { presentation, format }
+      });
+
+      if (error) throw error;
+
+      if (format === 'pdf') {
+        // Open print dialog with generated HTML
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(data.html);
+          printWindow.document.close();
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        }
+        toast.success('Откройте диалог печати для сохранения в PDF');
+      } else {
+        // Download PPTX data as text file for now
+        const blob = new Blob([data.data], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${presentation.config.topic}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success('Данные презентации сохранены (текстовый формат)');
+        toast.info('Полный экспорт в PPTX будет добавлен в следующей версии');
+      }
     } catch (error: any) {
       console.error('Error exporting:', error);
       toast.error(error.message || "Ошибка экспорта");
