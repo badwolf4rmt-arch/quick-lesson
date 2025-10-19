@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Image, RefreshCw, Trash2, Upload, X } from "lucide-react";
+import { Image, RefreshCw, Trash2, Upload, X, Wand2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { toast } from "sonner";
+import { AILoader } from "@/components/ui/ai-loader";
 
 interface SlideEditorProps {
   slide: Slide;
@@ -19,6 +20,7 @@ interface SlideEditorProps {
   onGenerateImage: (slideId: string, prompt: string) => Promise<void>;
   onRegenerateSlide: (slideId: string) => Promise<void>;
   isGeneratingImage: boolean;
+  isRegeneratingSlide: boolean;
   style: string;
 }
 
@@ -29,6 +31,7 @@ export const SlideEditor = ({
   onGenerateImage,
   onRegenerateSlide,
   isGeneratingImage,
+  isRegeneratingSlide,
   style
 }: SlideEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -64,6 +67,14 @@ export const SlideEditor = ({
     };
     reader.readAsDataURL(file);
   };
+
+  if (isRegeneratingSlide) {
+    return (
+      <Card className="p-6 space-y-4 shadow-card">
+        <AILoader text="Перегенерация слайда..." />
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6 space-y-4 shadow-card hover:shadow-soft transition-shadow">
@@ -131,7 +142,11 @@ export const SlideEditor = ({
         </div>
 
         <div className="space-y-4">
-          {slide.imageUrl ? (
+          {isGeneratingImage ? (
+            <div className="aspect-video rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
+              <AILoader text="Генерация изображения..." className="py-8" />
+            </div>
+          ) : slide.imageUrl ? (
             <div className="relative aspect-video rounded-lg overflow-hidden bg-muted group">
               <img
                 src={slide.imageUrl}
@@ -180,8 +195,17 @@ export const SlideEditor = ({
                 size="sm"
                 className="flex-1"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                {slide.imageUrl ? "Перегенерировать" : "Сгенерировать"}
+                {slide.imageUrl ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Перегенерировать
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    Сгенерировать
+                  </>
+                )}
               </Button>
               
               <Button

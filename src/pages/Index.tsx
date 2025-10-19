@@ -5,6 +5,7 @@ import { PresentationConfig, Presentation } from "@/types/presentation";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { GraduationCap } from "lucide-react";
+import { AILoader } from "@/components/ui/ai-loader";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -55,12 +56,18 @@ const Index = () => {
           </p>
         </div>
 
-        <div className="flex justify-center">
-          <PresentationForm
-            onSubmit={handleGeneratePresentation}
-            isLoading={isGenerating}
-          />
-        </div>
+        {isGenerating ? (
+          <div className="flex justify-center py-20">
+            <AILoader />
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <PresentationForm
+              onSubmit={handleGeneratePresentation}
+              isLoading={isGenerating}
+            />
+          </div>
+        )}
 
         <div className="mt-16 max-w-4xl mx-auto">
           <div className="grid md:grid-cols-3 gap-6">

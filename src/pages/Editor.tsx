@@ -4,7 +4,7 @@ import { Presentation, Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, Eye, Plus, ArrowLeft, GripVertical, Loader2 } from "lucide-react";
+import { Download, Eye, Edit, Plus, ArrowLeft, GripVertical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF, exportToPPTX } from "@/utils/exportUtils";
@@ -13,6 +13,7 @@ import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
+import { AILoader } from "@/components/ui/ai-loader";
 
 const Editor = () => {
   const location = useLocation();
@@ -21,6 +22,7 @@ const Editor = () => {
     location.state?.presentation || null
   );
   const [generatingImages, setGeneratingImages] = useState<Set<string>>(new Set());
+  const [regeneratingSlides, setRegeneratingSlides] = useState<Set<string>>(new Set());
   const [isPreview, setIsPreview] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -109,7 +111,7 @@ const Editor = () => {
     const slideIndex = presentation.slides.findIndex(s => s.id === slideId);
     if (slideIndex === -1) return;
 
-    toast.info("Перегенерация слайда...");
+    setRegeneratingSlides(prev => new Set(prev).add(slideId));
     
     try {
       const { data, error } = await supabase.functions.invoke('regenerate-slide', {
@@ -137,6 +139,12 @@ const Editor = () => {
     } catch (error: any) {
       console.error('Error regenerating slide:', error);
       toast.error(error.message || "Ошибка перегенерации слайда");
+    } finally {
+      setRegeneratingSlides(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(slideId);
+        return newSet;
+      });
     }
   };
 
@@ -165,6 +173,7 @@ const Editor = () => {
     if (!presentation) return;
     
     setIsExporting(true);
+    toast.info("⚠️ Экспорт пока не оптимизирован и сделан исключительно для демонстрации функционала");
     
     try {
       if (format === 'pptx') {
@@ -214,8 +223,17 @@ const Editor = () => {
                 size="sm"
                 onClick={() => setIsPreview(!isPreview)}
               >
-                <Eye className="h-4 w-4 mr-2" />
-                {isPreview ? "Редактор" : "Предпросмотр"}
+                {isPreview ? (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Редактор
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Предпросмотр
+                  </>
+                )}
               </Button>
               <Button
                 variant="outline"
@@ -287,6 +305,7 @@ const Editor = () => {
                   onGenerateImage={handleGenerateImage}
                   onRegenerateSlide={handleRegenerateSlide}
                   isGeneratingImage={generatingImages.has(slide.id)}
+                  isRegeneratingSlide={regeneratingSlides.has(slide.id)}
                   style={presentation.config.style}
                 />
               </div>
