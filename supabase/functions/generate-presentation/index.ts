@@ -16,9 +16,9 @@ serve(async (req) => {
     
     console.log('Generating presentation:', { subject, grade, topic, style, format, slideCount });
 
-    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY is not configured');
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+    if (!OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY is not configured');
     }
 
     // Создаем детальный промпт для генерации презентации с акцентом на академическую достоверность
@@ -102,18 +102,19 @@ ${mainText ? `Основной текст для использования:\n${
 
 Для каждого imagePrompt создавай детальное описание в стиле "${style}", чтобы изображение соответствовало теме и было образовательным.`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://lovable.dev',
+        'X-Title': 'Presentation Generator'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 8000,
-        system: systemPrompt,
+        model: 'openai/gpt-5-mini-2025-08-07',
+        max_completion_tokens: 8000,
         messages: [
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt + '\n\nВерни ответ строго в формате JSON как указано в системном промпте.' }
         ]
       }),
@@ -139,17 +140,20 @@ ${mainText ? `Основной текст для использования:\n${
 
     const data = await response.json();
     
-    if (!data.content || !data.content[0] || !data.content[0].text) {
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Invalid AI response structure:', JSON.stringify(data));
       throw new Error('Invalid response from AI');
     }
     
-    const generatedContent = data.content[0].text;
+    let generatedContent = data.choices[0].message.content;
     
     if (!generatedContent) {
       console.error('Empty content in AI response');
       throw new Error('No content generated');
     }
+
+    // Remove markdown code blocks if present
+    generatedContent = generatedContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
     console.log('Generated presentation structure');
 

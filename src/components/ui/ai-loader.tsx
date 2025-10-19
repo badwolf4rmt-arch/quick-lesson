@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
 const LOADING_PHRASES = [
-  "Анализирую запрос...",
-  "Подключаюсь к нейросети...",
-  "Генерирую контент...",
-  "Применяю креативность...",
-  "Почти готово...",
-  "Финальные штрихи...",
+  "✨ Готовлю что-то особенное для вас...",
+  "🎨 Рисую слайды с душой...",
+  "🧠 AI думает над идеальной структурой...",
+  "📚 Собираю знания со всего интернета...",
+  "🚀 Запускаю турбо-режим генерации...",
+  "🎯 Подбираю идеальные формулировки...",
+  "💡 Озарение приходит... почти здесь!",
+  "🎪 Устраиваю магию образования...",
+  "🌟 Добавляю капельку волшебства...",
+  "🎭 Превращаю знания в искусство...",
 ];
 
 interface AILoaderProps {
@@ -27,13 +31,13 @@ export const AILoader = ({ text, className = "" }: AILoaderProps) => {
   }, []);
 
   return (
-    <div className={`flex flex-col items-center justify-center gap-4 ${className}`}>
+    <div className={`flex flex-col items-center justify-center gap-6 p-8 ${className}`}>
       <div className="relative">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <Sparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+        <Sparkles className="h-16 w-16 text-primary relative animate-pulse" />
       </div>
-      <div className="text-center">
-        <p className="text-lg font-medium text-foreground animate-fade-in">
+      <div className="text-center max-w-md">
+        <p className="text-xl font-medium text-foreground animate-fade-in bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           {text || LOADING_PHRASES[phraseIndex]}
         </p>
       </div>
