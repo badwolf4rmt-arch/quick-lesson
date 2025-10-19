@@ -2,7 +2,44 @@ import { Presentation } from "@/types/presentation";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
-// Helper to convert markdown to plain text
+// Helper to convert LaTeX to Office Math Markup Language (OMML)
+function latexToOMML(latex: string): string {
+  // Базовая конвертация LaTeX в OMML для PowerPoint
+  let omml = latex
+    // Дроби: \frac{a}{b}
+    .replace(/\\\\frac\{([^}]+)\}\{([^}]+)\}/g, '<m:f><m:num><m:r><m:t>$1</m:t></m:r></m:num><m:den><m:r><m:t>$2</m:t></m:r></m:den></m:f>')
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<m:f><m:num><m:r><m:t>$1</m:t></m:r></m:num><m:den><m:r><m:t>$2</m:t></m:r></m:den></m:f>')
+    // Корни: \sqrt{x}
+    .replace(/\\\\sqrt\{([^}]+)\}/g, '<m:rad><m:radPr><m:degHide m:val="1"/></m:radPr><m:deg></m:deg><m:e><m:r><m:t>$1</m:t></m:r></m:e></m:rad>')
+    .replace(/\\sqrt\{([^}]+)\}/g, '<m:rad><m:radPr><m:degHide m:val="1"/></m:radPr><m:deg></m:deg><m:e><m:r><m:t>$1</m:t></m:r></m:e></m:rad>')
+    // Степени: x^2
+    .replace(/([a-zA-Z0-9]+)\^(\{[^}]+\}|[0-9a-zA-Z])/g, (match, base, exp) => {
+      const exponent = exp.replace(/[{}]/g, '');
+      return `<m:sSup><m:e><m:r><m:t>${base}</m:t></m:r></m:e><m:sup><m:r><m:t>${exponent}</m:t></m:r></m:sup></m:sSup>`;
+    })
+    // Индексы: x_1
+    .replace(/([a-zA-Z0-9]+)_(\{[^}]+\}|[0-9a-zA-Z])/g, (match, base, sub) => {
+      const subscript = sub.replace(/[{}]/g, '');
+      return `<m:sSub><m:e><m:r><m:t>${base}</m:t></m:r></m:e><m:sub><m:r><m:t>${subscript}</m:t></m:r></m:sub></m:sSub>`;
+    })
+    // Интегралы: \int
+    .replace(/\\\\int/g, '<m:nary><m:naryPr><m:chr m:val="∫"/></m:naryPr><m:sub></m:sub><m:sup></m:sup><m:e></m:e></m:nary>')
+    .replace(/\\int/g, '<m:nary><m:naryPr><m:chr m:val="∫"/></m:naryPr><m:sub></m:sub><m:sup></m:sup><m:e></m:e></m:nary>')
+    // Суммы: \sum
+    .replace(/\\\\sum/g, '<m:nary><m:naryPr><m:chr m:val="∑"/></m:naryPr><m:sub></m:sub><m:sup></m:sup><m:e></m:e></m:nary>')
+    .replace(/\\sum/g, '<m:nary><m:naryPr><m:chr m:val="∑"/></m:naryPr><m:sub></m:sub><m:sup></m:sup><m:e></m:e></m:nary>')
+    // Греческие буквы
+    .replace(/\\\\alpha/g, 'α').replace(/\\alpha/g, 'α')
+    .replace(/\\\\beta/g, 'β').replace(/\\beta/g, 'β')
+    .replace(/\\\\gamma/g, 'γ').replace(/\\gamma/g, 'γ')
+    .replace(/\\\\delta/g, 'δ').replace(/\\delta/g, 'δ')
+    .replace(/\\\\pi/g, 'π').replace(/\\pi/g, 'π')
+    .replace(/\\\\theta/g, 'θ').replace(/\\theta/g, 'θ');
+
+  return `<m:oMath>${omml}</m:oMath>`;
+}
+
+// Helper to convert markdown to plain text (preserving LaTeX)
 function markdownToText(markdown: string): string {
   return markdown
     .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -11,9 +48,7 @@ function markdownToText(markdown: string): string {
     .replace(/^\s*[-•→✓★⚡📌⚠️]\s+/gm, '• ')
     .replace(/^\s*\d+\.\s+/gm, '')
     .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/\$\$(.+?)\$\$/g, '$1')
-    .replace(/\$(.+?)\$/g, '$1');
+    .replace(/`(.+?)`/g, '$1');
 }
 
 // Escape XML special characters
@@ -150,8 +185,112 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
     const lineHeight = 450000; // Spacing between lines
     
     lines.forEach((line, lineIndex) => {
-      const cleanLine = escapeXml(line.trim());
-      textElements += `
+      const cleanLine = line.trim();
+      
+      // Проверяем наличие LaTeX формул в строке
+      const hasInlineMath = /\$([^$]+)\$/.test(cleanLine);
+      const hasBlockMath = /\$\$([^$]+)\$\$/.test(cleanLine);
+      
+      if (hasInlineMath || hasBlockMath) {
+        // Разбиваем строку на текст и формулы
+        const parts: Array<{type: 'text' | 'math', content: string}> = [];
+        let lastIndex = 0;
+        
+        // Сначала обрабатываем блочные формулы $$...$$
+        const blockMathRegex = /\$\$([^$]+)\$\$/g;
+        let match;
+        let tempLine = cleanLine;
+        
+        while ((match = blockMathRegex.exec(cleanLine)) !== null) {
+          if (match.index > lastIndex) {
+            const textBefore = cleanLine.substring(lastIndex, match.index);
+            if (textBefore) parts.push({type: 'text', content: textBefore});
+          }
+          parts.push({type: 'math', content: match[1]});
+          lastIndex = match.index + match[0].length;
+        }
+        
+        // Затем inline формулы $...$
+        if (lastIndex < cleanLine.length) {
+          const remaining = cleanLine.substring(lastIndex);
+          const inlineMathRegex = /\$([^$]+)\$/g;
+          let inlineLastIndex = 0;
+          
+          while ((match = inlineMathRegex.exec(remaining)) !== null) {
+            if (match.index > inlineLastIndex) {
+              const textBefore = remaining.substring(inlineLastIndex, match.index);
+              if (textBefore) parts.push({type: 'text', content: textBefore});
+            }
+            parts.push({type: 'math', content: match[1]});
+            inlineLastIndex = match.index + match[0].length;
+          }
+          
+          if (inlineLastIndex < remaining.length) {
+            const textAfter = remaining.substring(inlineLastIndex);
+            if (textAfter) parts.push({type: 'text', content: textAfter});
+          }
+        }
+        
+        // Создаем элемент с mixed content
+        let paragraphContent = '';
+        parts.forEach(part => {
+          if (part.type === 'text') {
+            paragraphContent += `
+              <a:r>
+                <a:rPr lang="ru-RU" sz="${fontSize}" dirty="0">
+                  <a:solidFill>
+                    <a:srgbClr val="${colors.text}"/>
+                  </a:solidFill>
+                  <a:latin typeface="Arial"/>
+                </a:rPr>
+                <a:t>${escapeXml(part.content)}</a:t>
+              </a:r>`;
+          } else {
+            // Формула - используем OMML
+            const omml = latexToOMML(part.content);
+            paragraphContent += `
+              <a:r>
+                <a:rPr lang="ru-RU" sz="${fontSize}">
+                  <a:solidFill>
+                    <a:srgbClr val="${colors.text}"/>
+                  </a:solidFill>
+                </a:rPr>
+                ${omml}
+              </a:r>`;
+          }
+        });
+        
+        textElements += `
+        <p:sp>
+          <p:nvSpPr>
+            <p:cNvPr id="${index * 100 + lineIndex + 3}" name="TextBox ${index * 100 + lineIndex + 3}"/>
+            <p:cNvSpPr txBox="1"/>
+            <p:nvPr/>
+          </p:nvSpPr>
+          <p:spPr>
+            <a:xfrm>
+              <a:off x="${hasImage ? '4800000' : '914400'}" y="${yPos}"/>
+              <a:ext cx="${hasImage ? '4000000' : '7315200'}" cy="400000"/>
+            </a:xfrm>
+            <a:prstGeom prst="rect">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:noFill/>
+          </p:spPr>
+          <p:txBody>
+            <a:bodyPr wrap="square" rtlCol="0">
+              <a:spAutoFit/>
+            </a:bodyPr>
+            <a:lstStyle/>
+            <a:p>
+              <a:pPr algn="l"/>
+              ${paragraphContent}
+            </a:p>
+          </p:txBody>
+        </p:sp>`;
+      } else {
+        // Обычный текст без формул
+        textElements += `
         <p:sp>
           <p:nvSpPr>
             <p:cNvPr id="${index * 100 + lineIndex + 3}" name="TextBox ${index * 100 + lineIndex + 3}"/>
@@ -182,11 +321,12 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
                   </a:solidFill>
                   <a:latin typeface="Arial"/>
                 </a:rPr>
-                <a:t>${cleanLine}</a:t>
+                <a:t>${escapeXml(cleanLine)}</a:t>
               </a:r>
             </a:p>
           </p:txBody>
         </p:sp>`;
+      }
       yPos += lineHeight;
     });
     

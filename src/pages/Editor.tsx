@@ -81,11 +81,15 @@ const Editor = () => {
 
       const imageUrl = data.imageUrl;
       
-      const newSlides = presentation.slides.map(slide =>
-        slide.id === slideId ? { ...slide, imageUrl } : slide
-      );
+      // Используем функциональное обновление для корректной работы с асинхронными операциями
+      setPresentation(prev => {
+        if (!prev) return prev;
+        const newSlides = prev.slides.map(slide =>
+          slide.id === slideId ? { ...slide, imageUrl } : slide
+        );
+        return { ...prev, slides: newSlides };
+      });
       
-      setPresentation({ ...presentation, slides: newSlides });
       toast.success("Изображение сгенерировано");
     } catch (error: any) {
       console.error('Error generating image:', error);
