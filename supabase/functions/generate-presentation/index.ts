@@ -16,9 +16,9 @@ serve(async (req) => {
     
     console.log('Generating presentation:', { subject, grade, topic, style, format, slideCount });
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is not configured');
     }
 
     // Создаем детальный промпт для генерации презентации с акцентом на академическую достоверность
@@ -102,19 +102,20 @@ ${mainText ? `Основной текст для использования:\n${
 
 Для каждого imagePrompt создавай детальное описание в стиле "${style}", чтобы изображение соответствовало теме и было образовательным.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'claude-sonnet-4-5',
+        max_tokens: 8000,
+        system: systemPrompt,
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: "json_object" }
+          { role: 'user', content: userPrompt + '\n\nВерни ответ строго в формате JSON как указано в системном промпте.' }
+        ]
       }),
     });
 
@@ -138,12 +139,12 @@ ${mainText ? `Основной текст для использования:\n${
 
     const data = await response.json();
     
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    if (!data.content || !data.content[0] || !data.content[0].text) {
       console.error('Invalid AI response structure:', JSON.stringify(data));
       throw new Error('Invalid response from AI');
     }
     
-    const generatedContent = data.choices[0].message.content;
+    const generatedContent = data.content[0].text;
     
     if (!generatedContent) {
       console.error('Empty content in AI response');

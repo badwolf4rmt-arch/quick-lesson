@@ -16,9 +16,9 @@ serve(async (req) => {
     
     console.log('Regenerating slide:', { slideIndex, currentTitle: currentSlide.title });
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is not configured');
     }
 
     const systemPrompt = `Ты опытный методист и педагог, который создаёт презентации для школьных уроков на русском языке.
@@ -82,19 +82,18 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
 
 Верни JSON с полями: title (строка), content (строка с markdown), imagePrompt (описание для генерации изображения на русском)`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'claude-sonnet-4-5',
+        max_tokens: 4000,
+        system: systemPrompt,
         messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
           {
             role: 'user',
             content: userPrompt
@@ -102,33 +101,29 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
         ],
         tools: [
           {
-            type: "function",
-            function: {
-              name: "regenerate_slide",
-              description: "Перегенерировать один слайд презентации",
-              parameters: {
-                type: "object",
-                properties: {
-                  title: {
-                    type: "string",
-                    description: "Заголовок слайда"
-                  },
-                  content: {
-                    type: "string",
-                    description: "Содержание слайда с форматированием markdown"
-                  },
-                  imagePrompt: {
-                    type: "string",
-                    description: "Описание для генерации изображения"
-                  }
+            name: "regenerate_slide",
+            description: "Перегенерировать один слайд презентации",
+            input_schema: {
+              type: "object",
+              properties: {
+                title: {
+                  type: "string",
+                  description: "Заголовок слайда"
                 },
-                required: ["title", "content", "imagePrompt"],
-                additionalProperties: false
-              }
+                content: {
+                  type: "string",
+                  description: "Содержание слайда с форматированием markdown"
+                },
+                imagePrompt: {
+                  type: "string",
+                  description: "Описание для генерации изображения"
+                }
+              },
+              required: ["title", "content", "imagePrompt"]
             }
           }
         ],
-        tool_choice: { type: "function", function: { name: "regenerate_slide" } }
+        tool_choice: { type: "tool", name: "regenerate_slide" }
       }),
     });
 
@@ -152,19 +147,19 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
 
     const data = await response.json();
     
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    if (!data.content || !data.content[0]) {
       console.error('Invalid AI response structure:', JSON.stringify(data));
       throw new Error('Invalid response from AI');
     }
     
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const toolUse = data.content.find((block: any) => block.type === 'tool_use');
     
-    if (!toolCall?.function?.arguments) {
-      console.error('No tool call in response:', JSON.stringify(data.choices[0].message));
+    if (!toolUse?.input) {
+      console.error('No tool use in response:', JSON.stringify(data.content));
       throw new Error('No slide data in response');
     }
 
-    const slideData = JSON.parse(toolCall.function.arguments);
+    const slideData = toolUse.input;
     console.log('Slide regenerated successfully');
 
     return new Response(
