@@ -41,14 +41,41 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
   
   const colors = colorSchemes[presentation.config.style] || colorSchemes['минимализм'];
   
-  // Add [Content_Types].xml
-  zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  // Download images if present
+  const imageData: Record<string, { blob: Blob; ext: string }> = {};
+  for (let i = 0; i < presentation.slides.length; i++) {
+    const slide = presentation.slides[i];
+    if (slide.imageUrl) {
+      try {
+        const response = await fetch(slide.imageUrl);
+        const blob = await response.blob();
+        const ext = blob.type.split('/')[1] || 'png';
+        imageData[i] = { blob, ext };
+      } catch (e) {
+        console.error('Failed to fetch image:', e);
+      }
+    }
+  }
+  
+  // Add [Content_Types].xml with all slides and images
+  let contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
-  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
-</Types>`);
+  <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="jpeg" ContentType="image/jpeg"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>`;
+  
+  presentation.slides.forEach((_, index) => {
+    contentTypesXml += `
+  <Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`;
+  });
+  
+  contentTypesXml += `
+</Types>`;
+  
+  zip.file("[Content_Types].xml", contentTypesXml);
   
   // Add _rels/.rels
   zip.folder("_rels")?.file(".rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -90,48 +117,108 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
   
   pptFolder?.file("presentation.xml", presentationXml);
   
+  // Add media folder for images
+  const mediaFolder = pptFolder?.folder("media");
+  
   // Add slides
   const slidesFolder = pptFolder?.folder("slides");
+  const slideRelsFolder = slidesFolder?.folder("_rels");
   
   presentation.slides.forEach((slide, index) => {
     const content = markdownToText(slide.content);
     const lines = content.split('\n').filter(line => line.trim());
     
-    let textElements = '';
-    let yPos = 1800000;
+    const hasImage = imageData[index];
     
-    lines.forEach(line => {
+    // Add image to media folder and create relationship
+    let slideRelsXml = '';
+    if (hasImage) {
+      const imageName = `image${index + 1}.${hasImage.ext}`;
+      mediaFolder?.file(imageName, hasImage.blob);
+      
+      slideRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${imageName}"/>
+</Relationships>`;
+      
+      slideRelsFolder?.file(`slide${index + 1}.xml.rels`, slideRelsXml);
+    }
+    
+    let textElements = '';
+    let yPos = hasImage ? 3000000 : 1800000; // Start lower if there's an image
+    const fontSize = 1800; // 18pt
+    const lineHeight = 450000; // Spacing between lines
+    
+    lines.forEach((line, lineIndex) => {
       const cleanLine = escapeXml(line.trim());
       textElements += `
         <p:sp>
           <p:nvSpPr>
-            <p:cNvPr id="${index * 100 + 3}" name="TextBox ${index * 100 + 3}"/>
+            <p:cNvPr id="${index * 100 + lineIndex + 3}" name="TextBox ${index * 100 + lineIndex + 3}"/>
             <p:cNvSpPr txBox="1"/>
             <p:nvPr/>
           </p:nvSpPr>
           <p:spPr>
             <a:xfrm>
-              <a:off x="914400" y="${yPos}"/>
-              <a:ext cx="7315200" cy="600000"/>
+              <a:off x="${hasImage ? '4800000' : '914400'}" y="${yPos}"/>
+              <a:ext cx="${hasImage ? '4000000' : '7315200'}" cy="400000"/>
             </a:xfrm>
-            <a:prstGeom prst="rect"/>
+            <a:prstGeom prst="rect">
+              <a:avLst/>
+            </a:prstGeom>
+            <a:noFill/>
           </p:spPr>
           <p:txBody>
-            <a:bodyPr wrap="square"/>
+            <a:bodyPr wrap="square" rtlCol="0">
+              <a:spAutoFit/>
+            </a:bodyPr>
+            <a:lstStyle/>
             <a:p>
+              <a:pPr algn="l"/>
               <a:r>
-                <a:rPr lang="ru-RU" sz="2400">
+                <a:rPr lang="ru-RU" sz="${fontSize}" dirty="0">
                   <a:solidFill>
                     <a:srgbClr val="${colors.text}"/>
                   </a:solidFill>
+                  <a:latin typeface="Arial"/>
                 </a:rPr>
                 <a:t>${cleanLine}</a:t>
               </a:r>
             </a:p>
           </p:txBody>
         </p:sp>`;
-      yPos += 600000;
+      yPos += lineHeight;
     });
+    
+    // Add image element if present
+    let imageElement = '';
+    if (hasImage) {
+      imageElement = `
+        <p:pic>
+          <p:nvPicPr>
+            <p:cNvPr id="${index * 100 + 1000}" name="Picture ${index + 1}"/>
+            <p:cNvPicPr>
+              <a:picLocks noChangeAspect="1"/>
+            </p:cNvPicPr>
+            <p:nvPr/>
+          </p:nvPicPr>
+          <p:blipFill>
+            <a:blip r:embed="rId1"/>
+            <a:stretch>
+              <a:fillRect/>
+            </a:stretch>
+          </p:blipFill>
+          <p:spPr>
+            <a:xfrm>
+              <a:off x="914400" y="1800000"/>
+              <a:ext cx="3600000" cy="2400000"/>
+            </a:xfrm>
+            <a:prstGeom prst="rect">
+              <a:avLst/>
+            </a:prstGeom>
+          </p:spPr>
+        </p:pic>`;
+    }
     
     const slideXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -149,7 +236,14 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
         <p:cNvGrpSpPr/>
         <p:nvPr/>
       </p:nvGrpSpPr>
-      <p:grpSpPr/>
+      <p:grpSpPr>
+        <a:xfrm>
+          <a:off x="0" y="0"/>
+          <a:ext cx="0" cy="0"/>
+          <a:chOff x="0" y="0"/>
+          <a:chExt cx="0" cy="0"/>
+        </a:xfrm>
+      </p:grpSpPr>
       <p:sp>
         <p:nvSpPr>
           <p:cNvPr id="${index * 100 + 2}" name="Title ${index + 1}"/>
@@ -163,23 +257,27 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
         <p:spPr>
           <a:xfrm>
             <a:off x="914400" y="457200"/>
-            <a:ext cx="7315200" cy="1200000"/>
+            <a:ext cx="7315200" cy="1000000"/>
           </a:xfrm>
         </p:spPr>
         <p:txBody>
           <a:bodyPr/>
+          <a:lstStyle/>
           <a:p>
+            <a:pPr algn="l"/>
             <a:r>
-              <a:rPr lang="ru-RU" sz="4400" b="1">
+              <a:rPr lang="ru-RU" sz="3600" b="1" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="${colors.accent}"/>
                 </a:solidFill>
+                <a:latin typeface="Arial"/>
               </a:rPr>
               <a:t>${escapeXml(slide.title)}</a:t>
             </a:r>
           </a:p>
         </p:txBody>
       </p:sp>
+      ${imageElement}
       ${textElements}
     </p:spTree>
   </p:cSld>
