@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-const FEEDBACK_API_URL = "https://ap-experiment-zone.onrender.com/api/external/feedback";
-const FEEDBACK_API_KEY = "fyI2K26aTOeIJkw_m_vBaoHm7Y8B3J5EjunFJZCepmY";
+import { supabase } from "@/integrations/supabase/client";
 const TOOL_NAME = "worksheets";
 
 const getSessionId = () => {
@@ -32,21 +30,16 @@ export const FeedbackButton = () => {
 
     setIsSending(true);
     try {
-      const res = await fetch(FEEDBACK_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": FEEDBACK_API_KEY,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('send-feedback', {
+        body: {
           tool_name: TOOL_NAME,
           session_id: getSessionId(),
           is_useful: isUseful,
           comment: comment.trim() || undefined,
-        }),
+        },
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (error) throw error;
 
       toast.success("Спасибо за отзыв!");
       setOpen(false);
