@@ -12,6 +12,7 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { toast } from "sonner";
 import { AILoader } from "@/components/ui/ai-loader";
+import { reachGoal } from "@/utils/analytics";
 
 interface SlideEditorProps {
   slide: Slide;
@@ -67,6 +68,7 @@ export const SlideEditor = ({
       const updatedSlide = { ...editedSlide, imageUrl };
       setEditedSlide(updatedSlide);
       onUpdate(updatedSlide);
+      reachGoal('aip_upload_image');
       toast.success("Изображение загружено");
     };
     reader.readAsDataURL(file);
@@ -139,7 +141,7 @@ export const SlideEditor = ({
               <Button onClick={handleCancel} variant="outline" size="sm">Отмена</Button>
             </div>
           ) : (
-            <Button onClick={() => setIsEditing(true)} variant="outline" size="sm">
+            <Button onClick={() => { reachGoal('aip_edit_text'); setIsEditing(true); }} variant="outline" size="sm">
               Редактировать текст
             </Button>
           )}

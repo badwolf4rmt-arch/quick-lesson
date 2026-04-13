@@ -14,6 +14,7 @@ import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { AILoader } from "@/components/ui/ai-loader";
+import { reachGoal } from "@/utils/analytics";
 
 const Editor = () => {
   const location = useLocation();
@@ -48,6 +49,7 @@ const Editor = () => {
     
     const newSlides = presentation.slides.filter((_, i) => i !== index);
     setPresentation({ ...presentation, slides: newSlides });
+    reachGoal('aip_delete_slide');
     toast.success("Слайд удален");
   };
 
@@ -65,6 +67,7 @@ const Editor = () => {
       ...presentation,
       slides: [...presentation.slides, newSlide]
     });
+    reachGoal('aip_add_slide');
     toast.success("Слайд добавлен");
   };
 
@@ -72,6 +75,7 @@ const Editor = () => {
     if (!presentation) return;
     
     setGeneratingImages(prev => new Set(prev).add(slideId));
+    reachGoal('aip_generate_image');
     
     // Generate loading phrases in background
     supabase.functions.invoke('generate-loading-phrases', {
@@ -135,6 +139,7 @@ const Editor = () => {
     if (slideIndex === -1) return;
 
     setRegeneratingSlides(prev => new Set(prev).add(slideId));
+    reachGoal('aip_regenerate_slide');
     
     // Generate loading phrases in background
     const currentSlide = presentation.slides[slideIndex];
@@ -219,6 +224,7 @@ const Editor = () => {
     if (!presentation) return;
     
     setIsExporting(true);
+    reachGoal('aip_download_file', { aip_download_file: { file_type: format } });
     toast.info("⚠️ Экспорт пока не оптимизирован и сделан исключительно для демонстрации функционала");
     
     try {
@@ -267,7 +273,10 @@ const Editor = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsPreview(!isPreview)}
+              onClick={() => {
+                if (!isPreview) reachGoal('aip_preview');
+                setIsPreview(!isPreview);
+              }}
               >
                 {isPreview ? (
                   <>

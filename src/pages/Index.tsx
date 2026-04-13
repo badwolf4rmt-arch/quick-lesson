@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { GraduationCap } from "lucide-react";
 import { AILoader } from "@/components/ui/ai-loader";
+import { reachGoal } from "@/utils/analytics";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -15,6 +16,17 @@ const Index = () => {
   const handleGeneratePresentation = async (config: PresentationConfig) => {
     setIsGenerating(true);
     setLoadingPhrases(undefined); // Reset to defaults first
+
+    // YM: aip_generate_presentation
+    reachGoal('aip_generate_presentation', {
+      aip_generate_presentation: {
+        slides_count: String(config.slideCount),
+        style: config.style || '',
+        format: config.format || '-',
+        additional_requirements: config.additionalPrompt || ' ',
+        main_text: config.mainText || ' ',
+      }
+    });
     
     // Start phrases generation in background (non-blocking)
     const generatePhrases = async () => {
