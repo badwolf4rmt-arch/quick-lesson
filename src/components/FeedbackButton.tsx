@@ -30,21 +30,16 @@ export const FeedbackButton = () => {
 
     setIsSending(true);
     try {
-      const res = await fetch(FEEDBACK_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": FEEDBACK_API_KEY,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('send-feedback', {
+        body: {
           tool_name: TOOL_NAME,
           session_id: getSessionId(),
           is_useful: isUseful,
           comment: comment.trim() || undefined,
-        }),
+        },
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (error) throw error;
 
       toast.success("Спасибо за отзыв!");
       setOpen(false);
