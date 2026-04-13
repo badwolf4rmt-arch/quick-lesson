@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-const FEEDBACK_API_URL = "https://ap-experiment-zone.onrender.com/api/external/feedback";
-const FEEDBACK_API_KEY = "fyI2K26aTOeIJkw_m_vBaoHm7Y8B3J5EjunFJZCepmY";
+import { supabase } from "@/integrations/supabase/client";
 const TOOL_NAME = "worksheets";
 
 const getSessionId = () => {
