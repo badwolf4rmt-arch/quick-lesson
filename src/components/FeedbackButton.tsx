@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-const TOOL_NAME = "worksheets";
+const TOOL_NAME = "presentations";
 
 const getSessionId = () => {
   let id = sessionStorage.getItem("feedback_session_id");
