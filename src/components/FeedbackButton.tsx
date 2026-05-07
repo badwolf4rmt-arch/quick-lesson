@@ -57,7 +57,7 @@ export const FeedbackButton = () => {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90 transition-opacity font-medium text-sm"
+        className="fixed bottom-6 left-6 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-green-600 text-white shadow-lg hover:bg-green-700 transition-colors font-medium text-sm"
       >
         <Star className="h-5 w-5" />
         Оставить отзыв
