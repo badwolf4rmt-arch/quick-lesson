@@ -8,6 +8,42 @@ import { GraduationCap } from "lucide-react";
 import { AILoader } from "@/components/ui/ai-loader";
 import { reachGoal } from "@/utils/analytics";
 
+const GENERATION_TIMEOUT_MS = 120_000;
+
+const invokeGeneratePresentation = async (config: PresentationConfig) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-presentation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify(config),
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : null;
+
+    if (!response.ok) {
+      throw new Error(payload?.error || `Ошибка генерации (${response.status})`);
+    }
+
+    return payload;
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new Error('Превышено время ожидания. Попробуйте уменьшить количество слайдов или повторите попытку.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+};
+
 const Index = () => {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -17,16 +53,17 @@ const Index = () => {
     setIsGenerating(true);
     setLoadingPhrases(undefined); // Reset to defaults first
 
-    // YM: aip_generate_presentation
-    reachGoal('aip_generate_presentation', {
-      aip_generate_presentation: {
-        slides_count: String(config.slideCount),
-        style: config.style || '',
-        format: config.format || '-',
-        additional_requirements: config.additionalPrompt || ' ',
-        main_text: config.mainText || ' ',
-      }
-    });
+    const sendAnalytics = () => {
+      reachGoal('aip_generate_presentation', {
+        aip_generate_presentation: {
+          slides_count: String(config.slideCount),
+          style: config.style || '',
+          format: config.format || '-',
+          additional_requirements: config.additionalPrompt || ' ',
+          main_text: config.mainText || ' ',
+        }
+      });
+    };
     
     // Start phrases generation in background (non-blocking)
     const generatePhrases = async () => {
@@ -54,29 +91,15 @@ const Index = () => {
       }
     };
 
-    // Start phrases generation without waiting
-    generatePhrases();
-    
     try {
-      // Client-side timeout (важно для мобильных Safari, где долгие fetch могут зависать)
-      const TIMEOUT_MS = 120_000;
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Превышено время ожидания. Попробуйте уменьшить количество слайдов или повторите попытку.')), TIMEOUT_MS)
-      );
+      const invokePromise = invokeGeneratePresentation(config);
 
-      const invokePromise = supabase.functions.invoke('generate-presentation', {
-        body: config
-      });
+      // Запускаем аналитику и фразы только после старта основного запроса: на Safari/WebKit
+      // сторонние скрипты иногда задерживают дальнейшее выполнение обработчика клика.
+      window.setTimeout(sendAnalytics, 300);
+      window.setTimeout(generatePhrases, 500);
 
-      const { data, error } = await Promise.race([
-        invokePromise,
-        timeoutPromise,
-      ]) as Awaited<typeof invokePromise>;
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || "Ошибка вызова функции генерации");
-      }
+      const data = await invokePromise;
 
       if (!data || !data.slides) {
         console.error('Invalid response data:', data);
