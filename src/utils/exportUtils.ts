@@ -269,6 +269,19 @@ ${presentation.slides.map(slide => {
 </body>
 </html>`;
 
+  // Deterministic layout validation: check overflow per slide before printing.
+  const layout = await validatePDFLayout(html, presentation);
+  if (!layout.ok) {
+    console.error("PDF validation failed", layout);
+    throw new Error("Битый PDF: " + layout.errors.join(" | "));
+  }
+  if (layout.warnings.length) {
+    console.warn("PDF layout warnings", layout.warnings, layout.details);
+    // Surface as a non-fatal issue the caller can show via toast
+    (window as unknown as { __lastPdfWarnings?: string[] }).__lastPdfWarnings =
+      layout.warnings;
+  }
+
   const printWindow = window.open('', '_blank');
   if (printWindow) {
     printWindow.document.write(html);
