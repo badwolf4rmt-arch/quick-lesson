@@ -58,10 +58,20 @@ const Index = () => {
     generatePhrases();
     
     try {
-      // Generate presentation
-      const { data, error } = await supabase.functions.invoke('generate-presentation', {
+      // Client-side timeout (важно для мобильных Safari, где долгие fetch могут зависать)
+      const TIMEOUT_MS = 120_000;
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Превышено время ожидания. Попробуйте уменьшить количество слайдов или повторите попытку.')), TIMEOUT_MS)
+      );
+
+      const invokePromise = supabase.functions.invoke('generate-presentation', {
         body: config
       });
+
+      const { data, error } = await Promise.race([
+        invokePromise,
+        timeoutPromise,
+      ]) as Awaited<typeof invokePromise>;
 
       if (error) {
         console.error('Edge function error:', error);
