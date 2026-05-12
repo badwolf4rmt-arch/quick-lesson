@@ -146,7 +146,24 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
     }
   }
 
-  await pptx.writeFile({ fileName: `${presentation.config.topic}.pptx` });
+  // Deterministic validation BEFORE writing the file to disk.
+  const blob = (await pptx.write({ outputType: "blob" })) as Blob;
+  const result = await validatePPTXBlob(blob, presentation.slides.length);
+  if (!result.ok) {
+    console.error("PPTX validation failed", result);
+    throw new Error("Битый PPTX: " + result.errors.join(" | "));
+  }
+  if (result.warnings.length) console.warn("PPTX warnings", result.warnings);
+
+  // Trigger download manually (since we already have the blob)
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${presentation.config.topic}.pptx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // Generate PDF by printing — one slide per page, no content split
