@@ -36,8 +36,9 @@ const FORMATS = [
   { value: "формальный", label: "Формальный" }
 ];
 
-const MIN_SLIDES = 3;
+const MIN_SLIDES = 1;
 const MAX_SLIDES = 30;
+const DEFAULT_SLIDES = 10;
 
 const clampSlideCount = (value: number) => Math.min(MAX_SLIDES, Math.max(MIN_SLIDES, value));
 
@@ -48,42 +49,43 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
     topic: "",
     style: "комикс",
     format: "теория-практика",
-    slideCount: 10,
+    slideCount: DEFAULT_SLIDES,
   });
 
-  const [slideCountInput, setSlideCountInput] = useState("10");
+  const [slideCountInput, setSlideCountInput] = useState(String(DEFAULT_SLIDES));
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-  const updateSlideCount = (value: number) => {
-    const nextValue = clampSlideCount(value);
-    setConfig({ ...config, slideCount: nextValue });
-    setSlideCountInput(String(nextValue));
-  };
-
   const handleSlideCountInputChange = (value: string) => {
+    // Allow empty so user can clear and retype
+    if (value === "") {
+      setSlideCountInput("");
+      return;
+    }
+    // Only digits
+    if (!/^\d+$/.test(value)) return;
+
     setSlideCountInput(value);
-
-    if (value === "") return;
-
     const numericValue = Number(value);
-    if (Number.isFinite(numericValue)) {
-      setConfig({ ...config, slideCount: clampSlideCount(Math.round(numericValue)) });
+    if (Number.isFinite(numericValue) && numericValue >= MIN_SLIDES && numericValue <= MAX_SLIDES) {
+      setConfig({ ...config, slideCount: numericValue });
     }
   };
 
   const normalizeSlideCountInput = () => {
     if (slideCountInput === "") {
-      setSlideCountInput(String(config.slideCount));
+      setSlideCountInput(String(DEFAULT_SLIDES));
+      setConfig({ ...config, slideCount: DEFAULT_SLIDES });
       return;
     }
-
-    updateSlideCount(Number(slideCountInput));
+    const next = clampSlideCount(Number(slideCountInput) || DEFAULT_SLIDES);
+    setSlideCountInput(String(next));
+    setConfig({ ...config, slideCount: next });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const normalizedSlideCount = clampSlideCount(Number(slideCountInput) || config.slideCount);
+    const normalizedSlideCount = clampSlideCount(Number(slideCountInput) || DEFAULT_SLIDES);
     onSubmit({ ...config, slideCount: normalizedSlideCount });
   };
 
