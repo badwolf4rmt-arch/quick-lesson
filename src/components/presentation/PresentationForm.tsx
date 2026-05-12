@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PresentationConfig } from "@/types/presentation";
-import { Sparkles, ChevronDown, Settings } from "lucide-react";
+import { Sparkles, ChevronDown, Settings, Minus, Plus } from "lucide-react";
 
 interface PresentationFormProps {
   onSubmit: (config: PresentationConfig) => void;
@@ -36,6 +37,11 @@ const FORMATS = [
   { value: "формальный", label: "Формальный" }
 ];
 
+const MIN_SLIDES = 3;
+const MAX_SLIDES = 30;
+
+const clampSlideCount = (value: number) => Math.min(MAX_SLIDES, Math.max(MIN_SLIDES, value));
+
 export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps) => {
   const [config, setConfig] = useState<PresentationConfig>({
     subject: "Математика",
@@ -46,11 +52,40 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
     slideCount: 10,
   });
 
+  const [slideCountInput, setSlideCountInput] = useState("10");
+
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+
+  const updateSlideCount = (value: number) => {
+    const nextValue = clampSlideCount(value);
+    setConfig({ ...config, slideCount: nextValue });
+    setSlideCountInput(String(nextValue));
+  };
+
+  const handleSlideCountInputChange = (value: string) => {
+    setSlideCountInput(value);
+
+    if (value === "") return;
+
+    const numericValue = Number(value);
+    if (Number.isFinite(numericValue)) {
+      setConfig({ ...config, slideCount: clampSlideCount(Math.round(numericValue)) });
+    }
+  };
+
+  const normalizeSlideCountInput = () => {
+    if (slideCountInput === "") {
+      setSlideCountInput(String(config.slideCount));
+      return;
+    }
+
+    updateSlideCount(Number(slideCountInput));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(config);
+    const normalizedSlideCount = clampSlideCount(Number(slideCountInput) || config.slideCount);
+    onSubmit({ ...config, slideCount: normalizedSlideCount });
   };
 
   return (
@@ -115,13 +150,47 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
 
           <div className="space-y-2">
             <Label htmlFor="slideCount">Количество слайдов</Label>
-            <Input
-              id="slideCount"
-              type="number"
-              min={3}
-              max={30}
-              value={config.slideCount}
-              onChange={(e) => setConfig({ ...config, slideCount: parseInt(e.target.value) || 10 })}
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => updateSlideCount(config.slideCount - 1)}
+                disabled={isLoading || config.slideCount <= MIN_SLIDES}
+                aria-label="Уменьшить количество слайдов"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Input
+                id="slideCount"
+                type="number"
+                inputMode="numeric"
+                min={MIN_SLIDES}
+                max={MAX_SLIDES}
+                value={slideCountInput}
+                onChange={(e) => handleSlideCountInputChange(e.target.value)}
+                onBlur={normalizeSlideCountInput}
+                className="text-center"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => updateSlideCount(config.slideCount + 1)}
+                disabled={isLoading || config.slideCount >= MAX_SLIDES}
+                aria-label="Увеличить количество слайдов"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <Slider
+              value={[config.slideCount]}
+              min={MIN_SLIDES}
+              max={MAX_SLIDES}
+              step={1}
+              onValueChange={([value]) => updateSlideCount(value)}
+              disabled={isLoading}
+              aria-label="Количество слайдов"
             />
           </div>
 
