@@ -1,5 +1,6 @@
 import { Presentation } from "@/types/presentation";
 import PptxGenJS from "pptxgenjs";
+import { validatePPTXBlob, validatePDFLayout } from "./exportValidators";
 
 // Helper to convert markdown to plain text and strip LaTeX
 function markdownToText(markdown: string): string {
