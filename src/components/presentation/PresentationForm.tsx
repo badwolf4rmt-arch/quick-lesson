@@ -4,11 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PresentationConfig } from "@/types/presentation";
-import { Sparkles, ChevronDown, Settings, Minus, Plus } from "lucide-react";
+import { Sparkles, ChevronDown, Settings } from "lucide-react";
 
 interface PresentationFormProps {
   onSubmit: (config: PresentationConfig) => void;
