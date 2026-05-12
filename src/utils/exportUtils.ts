@@ -1,5 +1,6 @@
 import { Presentation } from "@/types/presentation";
 import PptxGenJS from "pptxgenjs";
+import { validatePPTXBlob, validatePDFLayout } from "./exportValidators";
 
 // Helper to convert markdown to plain text and strip LaTeX
 function markdownToText(markdown: string): string {
@@ -145,7 +146,24 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
     }
   }
 
-  await pptx.writeFile({ fileName: `${presentation.config.topic}.pptx` });
+  // Deterministic validation BEFORE writing the file to disk.
+  const blob = (await pptx.write({ outputType: "blob" })) as Blob;
+  const result = await validatePPTXBlob(blob, presentation.slides.length);
+  if (!result.ok) {
+    console.error("PPTX validation failed", result);
+    throw new Error("Битый PPTX: " + result.errors.join(" | "));
+  }
+  if (result.warnings.length) console.warn("PPTX warnings", result.warnings);
+
+  // Trigger download manually (since we already have the blob)
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${presentation.config.topic}.pptx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // Generate PDF by printing — one slide per page, no content split
@@ -250,6 +268,19 @@ ${presentation.slides.map(slide => {
 </script>
 </body>
 </html>`;
+
+  // Deterministic layout validation: check overflow per slide before printing.
+  const layout = await validatePDFLayout(html, presentation);
+  if (!layout.ok) {
+    console.error("PDF validation failed", layout);
+    throw new Error("Битый PDF: " + layout.errors.join(" | "));
+  }
+  if (layout.warnings.length) {
+    console.warn("PDF layout warnings", layout.warnings, layout.details);
+    // Surface as a non-fatal issue the caller can show via toast
+    (window as unknown as { __lastPdfWarnings?: string[] }).__lastPdfWarnings =
+      layout.warnings;
+  }
 
   const printWindow = window.open('', '_blank');
   if (printWindow) {
