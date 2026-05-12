@@ -3,12 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { PresentationForm } from "@/components/presentation/PresentationForm";
 import { PresentationConfig, Presentation } from "@/types/presentation";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { GraduationCap } from "lucide-react";
 import { AILoader } from "@/components/ui/ai-loader";
 import { reachGoal } from "@/utils/analytics";
 
-const GENERATION_TIMEOUT_MS = 120_000;
+const GENERATION_TIMEOUT_MS = 300_000;
+
+const createLocalLoadingPhrases = (config: PresentationConfig) => [
+  `📚 Собираю материал: ${config.topic}...`,
+  "🧠 Выстраиваю логику урока...",
+  "✍️ Формулирую слайды без лишней воды...",
+  "🎯 Подбираю примеры для класса...",
+  "✨ Проверяю структуру презентации...",
+  "🧩 Складываю теорию и практику...",
+  "🚀 Финализирую результат...",
+];
 
 const invokeGeneratePresentation = async (config: PresentationConfig) => {
   const controller = new AbortController();
@@ -36,7 +45,7 @@ const invokeGeneratePresentation = async (config: PresentationConfig) => {
     return payload;
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      throw new Error('Превышено время ожидания. Попробуйте уменьшить количество слайдов или повторите попытку.');
+      throw new Error('Генерация заняла больше 5 минут. Попробуйте ещё раз или временно уменьшите количество слайдов.');
     }
     throw error;
   } finally {
@@ -51,7 +60,7 @@ const Index = () => {
 
   const handleGeneratePresentation = async (config: PresentationConfig) => {
     setIsGenerating(true);
-    setLoadingPhrases(undefined); // Reset to defaults first
+    setLoadingPhrases(createLocalLoadingPhrases(config));
 
     const sendAnalytics = () => {
       reachGoal('aip_generate_presentation', {
@@ -65,39 +74,12 @@ const Index = () => {
       });
     };
     
-    // Start phrases generation in background (non-blocking)
-    const generatePhrases = async () => {
-      try {
-        const { data: phrasesData } = await supabase.functions.invoke('generate-loading-phrases', {
-          body: { subject: config.subject, topic: config.topic }
-        });
-
-        if (phrasesData?.phrases && phrasesData.phrases.length > 0) {
-          console.log('Custom phrases loaded:', phrasesData.phrases);
-          setLoadingPhrases(phrasesData.phrases);
-        } else {
-          console.log('No phrases in response, retrying...');
-          // Retry once
-          const { data: retryData } = await supabase.functions.invoke('generate-loading-phrases', {
-            body: { subject: config.subject, topic: config.topic }
-          });
-          if (retryData?.phrases && retryData.phrases.length > 0) {
-            setLoadingPhrases(retryData.phrases);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to generate custom phrases:', error);
-        // Keep using default phrases
-      }
-    };
-
     try {
       const invokePromise = invokeGeneratePresentation(config);
 
-      // Запускаем аналитику и фразы только после старта основного запроса: на Safari/WebKit
+      // Запускаем аналитику только после старта основного запроса: на Safari/WebKit
       // сторонние скрипты иногда задерживают дальнейшее выполнение обработчика клика.
       window.setTimeout(sendAnalytics, 300);
-      window.setTimeout(generatePhrases, 500);
 
       const data = await invokePromise;
 
