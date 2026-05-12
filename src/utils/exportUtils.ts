@@ -1,6 +1,5 @@
 import { Presentation } from "@/types/presentation";
-import JSZip from "jszip";
-import { saveAs } from "file-saver";
+import PptxGenJS from "pptxgenjs";
 
 // Helper to convert markdown to plain text and strip LaTeX
 function markdownToText(markdown: string): string {
@@ -12,403 +11,250 @@ function markdownToText(markdown: string): string {
     .replace(/^\s*\d+\.\s+/gm, '')
     .replace(/\[(.+?)\]\(.+?\)/g, '$1')
     .replace(/`(.+?)`/g, '$1')
-    // Преобразуем LaTeX формулы в читаемый текст
-    .replace(/\$\$([^$]+)\$\$/g, (_, formula) => {
-      return formula
-        .replace(/\\\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)')
-        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)')
-        .replace(/\\\\sqrt\{([^}]+)\}/g, '√($1)')
-        .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
-        .replace(/\^(\{[^}]+\}|[0-9a-zA-Z])/g, (m, exp) => `^${exp.replace(/[{}]/g, '')}`)
-        .replace(/_(\{[^}]+\}|[0-9a-zA-Z])/g, (m, sub) => `_${sub.replace(/[{}]/g, '')}`)
-        .replace(/\\\\?int/g, '∫')
-        .replace(/\\\\?sum/g, '∑')
-        .replace(/\\\\?pi/g, 'π')
-        .replace(/\\\\?alpha/g, 'α')
-        .replace(/\\\\?beta/g, 'β')
-        .replace(/\\\\?gamma/g, 'γ')
-        .replace(/\\\\?delta/g, 'δ')
-        .replace(/\\\\?theta/g, 'θ');
-    })
-    .replace(/\$([^$]+)\$/g, (_, formula) => {
-      return formula
-        .replace(/\\\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)')
-        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)')
-        .replace(/\\\\sqrt\{([^}]+)\}/g, '√($1)')
-        .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
-        .replace(/\^(\{[^}]+\}|[0-9a-zA-Z])/g, (m, exp) => `^${exp.replace(/[{}]/g, '')}`)
-        .replace(/_(\{[^}]+\}|[0-9a-zA-Z])/g, (m, sub) => `_${sub.replace(/[{}]/g, '')}`)
-        .replace(/\\\\?int/g, '∫')
-        .replace(/\\\\?sum/g, '∑')
-        .replace(/\\\\?pi/g, 'π')
-        .replace(/\\\\?alpha/g, 'α')
-        .replace(/\\\\?beta/g, 'β')
-        .replace(/\\\\?gamma/g, 'γ')
-        .replace(/\\\\?delta/g, 'δ')
-        .replace(/\\\\?theta/g, 'θ');
-    });
+    .replace(/\$\$([^$]+)\$\$/g, (_, formula) => simplifyLatex(formula))
+    .replace(/\$([^$]+)\$/g, (_, formula) => simplifyLatex(formula));
 }
 
-// Escape XML special characters
-function escapeXml(text: string): string {
+function simplifyLatex(formula: string): string {
+  return formula
+    .replace(/\\\\?frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)')
+    .replace(/\\\\?sqrt\{([^}]+)\}/g, '√($1)')
+    .replace(/\^(\{[^}]+\}|[0-9a-zA-Z])/g, (_m, exp) => `^${exp.replace(/[{}]/g, '')}`)
+    .replace(/_(\{[^}]+\}|[0-9a-zA-Z])/g, (_m, sub) => `_${sub.replace(/[{}]/g, '')}`)
+    .replace(/\\\\?int/g, '∫')
+    .replace(/\\\\?sum/g, '∑')
+    .replace(/\\\\?pi/g, 'π')
+    .replace(/\\\\?alpha/g, 'α')
+    .replace(/\\\\?beta/g, 'β')
+    .replace(/\\\\?gamma/g, 'γ')
+    .replace(/\\\\?delta/g, 'δ')
+    .replace(/\\\\?theta/g, 'θ');
+}
+
+function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/'/g, '&#39;');
 }
 
-// Generate PPTX file
+const colorSchemes: Record<string, { bg: string; text: string; accent: string }> = {
+  'минимализм': { bg: 'FFFFFF', text: '333333', accent: '6366F1' },
+  'школьная тетрадь': { bg: 'F0F4F8', text: '1E293B', accent: '3B82F6' },
+  'официальный': { bg: 'FFFFFF', text: '1F2937', accent: '1E40AF' },
+  'комикс': { bg: 'FEF3C7', text: '78350F', accent: 'F59E0B' },
+  '3D-мультфильм': { bg: 'E0E7FF', text: '312E81', accent: '8B5CF6' }
+};
+
+// Convert image URL to base64 data URI
+async function imageToDataUri(url: string): Promise<string | null> {
+  try {
+    if (url.startsWith('data:')) return url;
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.error('Failed to fetch image:', e);
+    return null;
+  }
+}
+
+// Generate PPTX file using pptxgenjs (reliable, no corruption)
 export async function exportToPPTX(presentation: Presentation): Promise<void> {
-  const zip = new JSZip();
-  
-  // Color schemes
-  const colorSchemes: Record<string, { bg: string; text: string; accent: string }> = {
-    'минимализм': { bg: 'FFFFFF', text: '000000', accent: '6366F1' },
-    'школьная тетрадь': { bg: 'F0F4F8', text: '1E293B', accent: '3B82F6' },
-    'официальный': { bg: 'FFFFFF', text: '1F2937', accent: '1E40AF' },
-    'комикс': { bg: 'FEF3C7', text: '78350F', accent: 'F59E0B' },
-    '3D-мультфильм': { bg: 'E0E7FF', text: '312E81', accent: '8B5CF6' }
-  };
-  
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE'; // 13.333 x 7.5 inches (16:9)
+  pptx.title = presentation.config.topic;
+
   const colors = colorSchemes[presentation.config.style] || colorSchemes['минимализм'];
-  
-  // Download images if present
-  const imageData: Record<string, { blob: Blob; ext: string }> = {};
-  for (let i = 0; i < presentation.slides.length; i++) {
-    const slide = presentation.slides[i];
+  const SLIDE_W = 13.333;
+  const SLIDE_H = 7.5;
+
+  for (const slide of presentation.slides) {
+    const pSlide = pptx.addSlide();
+    pSlide.background = { color: colors.bg };
+
+    // Title
+    pSlide.addText(slide.title, {
+      x: 0.5,
+      y: 0.3,
+      w: SLIDE_W - 1,
+      h: 0.9,
+      fontSize: 28,
+      bold: true,
+      color: colors.accent,
+      fontFace: 'Arial',
+      align: 'left',
+      valign: 'top',
+    });
+
+    const content = markdownToText(slide.content);
+    const lines = content.split('\n').filter(l => l.trim());
+
+    let imgData: string | null = null;
     if (slide.imageUrl) {
-      try {
-        const response = await fetch(slide.imageUrl);
-        const blob = await response.blob();
-        const ext = blob.type.split('/')[1] || 'png';
-        imageData[i] = { blob, ext };
-      } catch (e) {
-        console.error('Failed to fetch image:', e);
-      }
+      imgData = await imageToDataUri(slide.imageUrl);
+    }
+
+    if (imgData) {
+      // Image left, text right
+      pSlide.addImage({
+        data: imgData,
+        x: 0.5,
+        y: 1.5,
+        w: 5.5,
+        h: 5.5,
+      });
+      pSlide.addText(
+        lines.map(l => ({ text: l, options: { bullet: false, breakLine: true } })),
+        {
+          x: 6.3,
+          y: 1.5,
+          w: SLIDE_W - 6.8,
+          h: 5.5,
+          fontSize: 16,
+          color: colors.text,
+          fontFace: 'Arial',
+          align: 'left',
+          valign: 'top',
+          paraSpaceAfter: 6,
+        }
+      );
+    } else {
+      pSlide.addText(
+        lines.map(l => ({ text: l, options: { bullet: false, breakLine: true } })),
+        {
+          x: 0.5,
+          y: 1.5,
+          w: SLIDE_W - 1,
+          h: 5.5,
+          fontSize: 18,
+          color: colors.text,
+          fontFace: 'Arial',
+          align: 'left',
+          valign: 'top',
+          paraSpaceAfter: 8,
+        }
+      );
     }
   }
-  
-  // Add [Content_Types].xml with all slides and images
-  let contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Default Extension="png" ContentType="image/png"/>
-  <Default Extension="jpeg" ContentType="image/jpeg"/>
-  <Default Extension="jpg" ContentType="image/jpeg"/>
-  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>`;
-  
-  presentation.slides.forEach((_, index) => {
-    contentTypesXml += `
-  <Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`;
-  });
-  
-  contentTypesXml += `
-</Types>`;
-  
-  zip.file("[Content_Types].xml", contentTypesXml);
-  
-  // Add _rels/.rels
-  zip.folder("_rels")?.file(".rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
-</Relationships>`);
-  
-  // Add ppt/_rels/presentation.xml.rels
-  const pptFolder = zip.folder("ppt");
-  const relsFolder = pptFolder?.folder("_rels");
-  
-  let relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`;
-  
-  presentation.slides.forEach((_, index) => {
-    relsXml += `
-  <Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${index + 1}.xml"/>`;
-  });
-  
-  relsXml += `
-</Relationships>`;
-  
-  relsFolder?.file("presentation.xml.rels", relsXml);
-  
-  // Add ppt/presentation.xml
-  let presentationXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:sldIdLst>`;
-  
-  presentation.slides.forEach((_, index) => {
-    presentationXml += `
-    <p:sldId id="${256 + index}" r:id="rId${index + 1}"/>`;
-  });
-  
-  presentationXml += `
-  </p:sldIdLst>
-  <p:sldSz cx="9144000" cy="6858000"/>
-</p:presentation>`;
-  
-  pptFolder?.file("presentation.xml", presentationXml);
-  
-  // Add media folder for images
-  const mediaFolder = pptFolder?.folder("media");
-  
-  // Add slides
-  const slidesFolder = pptFolder?.folder("slides");
-  const slideRelsFolder = slidesFolder?.folder("_rels");
-  
-  presentation.slides.forEach((slide, index) => {
-    const content = markdownToText(slide.content);
-    const lines = content.split('\n').filter(line => line.trim());
-    
-    const hasImage = imageData[index];
-    
-    // Add image to media folder and create relationship
-    let slideRelsXml = '';
-    if (hasImage) {
-      const imageName = `image${index + 1}.${hasImage.ext}`;
-      mediaFolder?.file(imageName, hasImage.blob);
-      
-      slideRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${imageName}"/>
-</Relationships>`;
-      
-      slideRelsFolder?.file(`slide${index + 1}.xml.rels`, slideRelsXml);
-    }
-    
-    let textElements = '';
-    let yPos = hasImage ? 4200000 : 1800000; // Start lower if there's an image
-    const fontSize = 1400; // 14pt - уменьшил размер шрифта
-    const lineHeight = 550000; // Увеличил межстрочный интервал
-    
-    lines.forEach((line, lineIndex) => {
-      const cleanLine = escapeXml(line.trim());
-      
-      textElements += `
-        <p:sp>
-          <p:nvSpPr>
-            <p:cNvPr id="${index * 100 + lineIndex + 3}" name="TextBox ${index * 100 + lineIndex + 3}"/>
-            <p:cNvSpPr txBox="1"/>
-            <p:nvPr/>
-          </p:nvSpPr>
-          <p:spPr>
-            <a:xfrm>
-              <a:off x="${hasImage ? '4400000' : '914400'}" y="${yPos}"/>
-              <a:ext cx="${hasImage ? '4200000' : '7315200'}" cy="500000"/>
-            </a:xfrm>
-            <a:prstGeom prst="rect">
-              <a:avLst/>
-            </a:prstGeom>
-            <a:noFill/>
-          </p:spPr>
-          <p:txBody>
-            <a:bodyPr wrap="square" rtlCol="0" anchor="t">
-              <a:normAutofit/>
-            </a:bodyPr>
-            <a:lstStyle/>
-            <a:p>
-              <a:pPr algn="l"/>
-              <a:r>
-                <a:rPr lang="ru-RU" sz="${fontSize}" dirty="0">
-                  <a:solidFill>
-                    <a:srgbClr val="${colors.text}"/>
-                  </a:solidFill>
-                  <a:latin typeface="Arial"/>
-                </a:rPr>
-                <a:t>${cleanLine}</a:t>
-              </a:r>
-            </a:p>
-          </p:txBody>
-        </p:sp>`;
-      yPos += lineHeight;
-    });
-    
-    // Add image element if present (corrected aspect ratio)
-    let imageElement = '';
-    if (hasImage) {
-      imageElement = `
-        <p:pic>
-          <p:nvPicPr>
-            <p:cNvPr id="${index * 100 + 1000}" name="Picture ${index + 1}"/>
-            <p:cNvPicPr>
-              <a:picLocks noChangeAspect="1"/>
-            </p:cNvPicPr>
-            <p:nvPr/>
-          </p:nvPicPr>
-          <p:blipFill>
-            <a:blip r:embed="rId1"/>
-            <a:srcRect/>
-            <a:stretch>
-              <a:fillRect/>
-            </a:stretch>
-          </p:blipFill>
-          <p:spPr>
-            <a:xfrm>
-              <a:off x="914400" y="1800000"/>
-              <a:ext cx="3200000" cy="2000000"/>
-            </a:xfrm>
-            <a:prstGeom prst="rect">
-              <a:avLst/>
-            </a:prstGeom>
-          </p:spPr>
-        </p:pic>`;
-    }
-    
-    const slideXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-  <p:cSld>
-    <p:bg>
-      <p:bgPr>
-        <a:solidFill>
-          <a:srgbClr val="${colors.bg}"/>
-        </a:solidFill>
-      </p:bgPr>
-    </p:bg>
-    <p:spTree>
-      <p:nvGrpSpPr>
-        <p:cNvPr id="1" name=""/>
-        <p:cNvGrpSpPr/>
-        <p:nvPr/>
-      </p:nvGrpSpPr>
-      <p:grpSpPr>
-        <a:xfrm>
-          <a:off x="0" y="0"/>
-          <a:ext cx="0" cy="0"/>
-          <a:chOff x="0" y="0"/>
-          <a:chExt cx="0" cy="0"/>
-        </a:xfrm>
-      </p:grpSpPr>
-      <p:sp>
-        <p:nvSpPr>
-          <p:cNvPr id="${index * 100 + 2}" name="Title ${index + 1}"/>
-          <p:cNvSpPr>
-            <a:spLocks noGrp="1"/>
-          </p:cNvSpPr>
-          <p:nvPr>
-            <p:ph type="title"/>
-          </p:nvPr>
-        </p:nvSpPr>
-        <p:spPr>
-          <a:xfrm>
-            <a:off x="914400" y="457200"/>
-            <a:ext cx="7315200" cy="1200000"/>
-          </a:xfrm>
-        </p:spPr>
-        <p:txBody>
-          <a:bodyPr anchor="t"/>
-          <a:lstStyle/>
-          <a:p>
-            <a:pPr algn="l" marL="0" indent="0"/>
-            <a:r>
-              <a:rPr lang="ru-RU" sz="3200" b="1" dirty="0">
-                <a:solidFill>
-                  <a:srgbClr val="${colors.accent}"/>
-                </a:solidFill>
-                <a:latin typeface="Arial"/>
-              </a:rPr>
-              <a:t>${escapeXml(slide.title)}</a:t>
-            </a:r>
-          </a:p>
-        </p:txBody>
-      </p:sp>
-      ${imageElement}
-      ${textElements}
-    </p:spTree>
-  </p:cSld>
-</p:sld>`;
-    
-    slidesFolder?.file(`slide${index + 1}.xml`, slideXml);
-  });
-  
-  // Generate and download
-  const blob = await zip.generateAsync({ type: "blob" });
-  saveAs(blob, `${presentation.config.topic}.pptx`);
+
+  await pptx.writeFile({ fileName: `${presentation.config.topic}.pptx` });
 }
 
-// Generate PDF by printing
+// Generate PDF by printing — one slide per page, no content split
 export async function exportToPDF(presentation: Presentation): Promise<void> {
-  const colorSchemes: Record<string, { bg: string; text: string; accent: string }> = {
+  const pdfColors: Record<string, { bg: string; text: string; accent: string }> = {
     'минимализм': { bg: '#FFFFFF', text: '#333333', accent: '#6366F1' },
     'школьная тетрадь': { bg: '#F0F4F8', text: '#1E293B', accent: '#3B82F6' },
     'официальный': { bg: '#FFFFFF', text: '#1F2937', accent: '#1E40AF' },
     'комикс': { bg: '#FEF3C7', text: '#78350F', accent: '#F59E0B' },
     '3D-мультфильм': { bg: '#E0E7FF', text: '#312E81', accent: '#8B5CF6' }
   };
-  
-  const colors = colorSchemes[presentation.config.style] || colorSchemes['минимализм'];
-  
+
+  const colors = pdfColors[presentation.config.style] || pdfColors['минимализм'];
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>${presentation.config.topic}</title>
+  <title>${escapeHtml(presentation.config.topic)}</title>
   <style>
     @page {
       size: A4 landscape;
-      margin: 15mm;
+      margin: 0;
     }
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
-    body {
-      font-family: Arial, sans-serif;
+    * { box-sizing: border-box; }
+    html, body {
       margin: 0;
       padding: 0;
+      font-family: Arial, sans-serif;
     }
     .slide {
-      page-break-after: always;
-      padding: 40px;
-      min-height: 170mm;
+      width: 297mm;
+      height: 210mm;
+      padding: 12mm 15mm;
       background: ${colors.bg};
       color: ${colors.text};
-      box-sizing: border-box;
+      page-break-after: always;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
-    .slide:last-child {
-      page-break-after: avoid;
-    }
+    .slide:last-child { page-break-after: auto; }
     h1 {
-      font-size: 36px;
-      margin: 0 0 30px 0;
+      font-size: 26pt;
+      margin: 0 0 8mm 0;
       color: ${colors.accent};
       font-weight: bold;
+      line-height: 1.2;
+    }
+    .body {
+      display: flex;
+      flex: 1;
+      gap: 8mm;
+      min-height: 0;
+    }
+    .body.no-image .content { flex: 1; }
+    .image-wrap {
+      flex: 0 0 45%;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .image-wrap img {
+      max-width: 100%;
+      max-height: 160mm;
+      object-fit: contain;
+      border-radius: 6px;
     }
     .content {
-      font-size: 18px;
-      line-height: 1.6;
-      white-space: pre-wrap;
+      flex: 1;
+      font-size: 13pt;
+      line-height: 1.45;
+      overflow: hidden;
     }
-    .content p {
-      margin: 10px 0;
-    }
-    img {
-      max-width: 500px;
-      max-height: 300px;
-      margin: 20px 0;
-      border-radius: 8px;
-    }
+    .content p { margin: 0 0 4mm 0; }
   </style>
 </head>
 <body>
 ${presentation.slides.map(slide => {
   const content = markdownToText(slide.content);
-  return `  <div class="slide">
-    <h1>${escapeXml(slide.title)}</h1>
-    ${slide.imageUrl ? `<img src="${slide.imageUrl}" alt="${escapeXml(slide.title)}" />` : ''}
-    <div class="content">${content.split('\n').filter(l => l.trim()).map(l => `<p>${escapeXml(l)}</p>`).join('\n')}</div>
+  const paragraphs = content.split('\n').filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
+  const hasImage = !!slide.imageUrl;
+  return `<div class="slide">
+    <h1>${escapeHtml(slide.title)}</h1>
+    <div class="body ${hasImage ? '' : 'no-image'}">
+      ${hasImage ? `<div class="image-wrap"><img src="${slide.imageUrl}" alt="${escapeHtml(slide.title)}" /></div>` : ''}
+      <div class="content">${paragraphs}</div>
+    </div>
   </div>`;
 }).join('\n')}
+<script>
+  window.addEventListener('load', () => {
+    const imgs = Array.from(document.images);
+    Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })))
+      .then(() => setTimeout(() => window.print(), 300));
+  });
+</script>
 </body>
 </html>`;
-  
-  // Open in new window and trigger print
+
   const printWindow = window.open('', '_blank');
   if (printWindow) {
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
   }
 }
