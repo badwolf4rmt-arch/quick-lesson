@@ -151,47 +151,16 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
 
           <div className="space-y-2">
             <Label htmlFor="slideCount">Количество слайдов</Label>
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => updateSlideCount(config.slideCount - 1)}
-                disabled={isLoading || config.slideCount <= MIN_SLIDES}
-                aria-label="Уменьшить количество слайдов"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <Input
-                id="slideCount"
-                type="number"
-                inputMode="numeric"
-                min={MIN_SLIDES}
-                max={MAX_SLIDES}
-                value={slideCountInput}
-                onChange={(e) => handleSlideCountInputChange(e.target.value)}
-                onBlur={normalizeSlideCountInput}
-                className="text-center"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => updateSlideCount(config.slideCount + 1)}
-                disabled={isLoading || config.slideCount >= MAX_SLIDES}
-                aria-label="Увеличить количество слайдов"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <Slider
-              value={[config.slideCount]}
+            <Input
+              id="slideCount"
+              type="number"
+              inputMode="numeric"
               min={MIN_SLIDES}
               max={MAX_SLIDES}
-              step={1}
-              onValueChange={([value]) => updateSlideCount(value)}
+              value={slideCountInput}
+              onChange={(e) => handleSlideCountInputChange(e.target.value)}
+              onBlur={normalizeSlideCountInput}
               disabled={isLoading}
-              aria-label="Количество слайдов"
             />
           </div>
 
