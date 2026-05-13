@@ -5,10 +5,10 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
-      # Прокси только к backend-функциям. Render wildcard подставляется как *.
+      # Прокси только к backend-функциям: браузер ходит на Render-домен, Render — к функциям.
       - type: rewrite
-        source: /api/*
-        destination: https://fahrcihwemfxqlcprupu.functions.supabase.co/*
+        source: /api/:function
+        destination: https://fahrcihwemfxqlcprupu.functions.supabase.co/:function
       # SPA fallback
       - type: rewrite
         source: /*
