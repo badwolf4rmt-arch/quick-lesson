@@ -14,3 +14,8 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+    headers:
+      # Не кешируем проксированные ответы backend-функций как статический HTML.
+      - path: /sb/*
+        name: Cache-Control
+        value: no-store
