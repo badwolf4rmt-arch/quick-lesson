@@ -124,7 +124,7 @@ ${mainText ? `Основной текст для использования:\n${
         'X-Title': 'Presentation Generator'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4.1-mini-2025-04-14',
+        model: 'openai/gpt-5-mini',
         max_tokens: 8000,
         messages: [
           { role: 'system', content: systemPrompt },
