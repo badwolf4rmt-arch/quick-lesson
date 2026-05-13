@@ -97,7 +97,7 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
         'X-Title': 'Slide Regenerator'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4.1-mini-2025-04-14',
+        model: 'openai/gpt-5-mini',
         max_tokens: 4000,
         messages: [
           { role: 'system', content: systemPrompt },

@@ -28,7 +28,7 @@ serve(async (req) => {
         'X-Title': 'Loading Phrases Generator'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4.1-mini-2025-04-14',
+        model: 'openai/gpt-5-mini',
         max_tokens: 1000,
         messages: [
           {
