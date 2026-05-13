@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Download, Eye, Edit, Plus, ArrowLeft, GripVertical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF, exportToPPTX } from "@/utils/exportUtils";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
@@ -15,6 +14,7 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { AILoader } from "@/components/ui/ai-loader";
 import { reachGoal } from "@/utils/analytics";
+import { invokeBackendFunction } from "@/utils/backendFunctions";
 
 const Editor = () => {
   const location = useLocation();
@@ -78,26 +78,20 @@ const Editor = () => {
     reachGoal('aip_generate_image');
     
     // Generate loading phrases in background
-    supabase.functions.invoke('generate-loading-phrases', {
-      body: { subject: "Генерация изображения", topic: prompt.slice(0, 100) }
-    }).then(({ data }) => {
+    invokeBackendFunction<{ phrases?: string[] }>('generate-loading-phrases', {
+      subject: "Генерация изображения",
+      topic: prompt.slice(0, 100),
+    }).then((data) => {
       if (data?.phrases) {
         setImageLoadingPhrases(prev => ({ ...prev, [slideId]: data.phrases }));
       }
     }).catch(() => {});
     
     try {
-      const { data, error } = await supabase.functions.invoke('generate-slide-image', {
-        body: { 
-          prompt,
-          style: presentation.config.style 
-        }
+      const data = await invokeBackendFunction<{ imageUrl?: string }>('generate-slide-image', {
+        prompt,
+        style: presentation.config.style,
       });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || "Ошибка вызова функции генерации изображения");
-      }
 
       if (!data || !data.imageUrl) {
         console.error('Invalid response data:', data);
@@ -143,27 +137,21 @@ const Editor = () => {
     
     // Generate loading phrases in background
     const currentSlide = presentation.slides[slideIndex];
-    supabase.functions.invoke('generate-loading-phrases', {
-      body: { subject: presentation.config.subject, topic: currentSlide.title }
-    }).then(({ data }) => {
+    invokeBackendFunction<{ phrases?: string[] }>('generate-loading-phrases', {
+      subject: presentation.config.subject,
+      topic: currentSlide.title,
+    }).then((data) => {
       if (data?.phrases) {
         setSlideLoadingPhrases(prev => ({ ...prev, [slideId]: data.phrases }));
       }
     }).catch(() => {});
     
     try {
-      const { data, error } = await supabase.functions.invoke('regenerate-slide', {
-        body: { 
-          config: presentation.config,
-          slideIndex: slideIndex + 1,
-          currentSlide: presentation.slides[slideIndex]
-        }
+      const data = await invokeBackendFunction<{ title?: string; content?: string; imagePrompt?: string }>('regenerate-slide', {
+        config: presentation.config,
+        slideIndex: slideIndex + 1,
+        currentSlide: presentation.slides[slideIndex],
       });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || "Ошибка вызова функции перегенерации слайда");
-      }
 
       if (!data || !data.title || !data.content) {
         console.error('Invalid response data:', data);

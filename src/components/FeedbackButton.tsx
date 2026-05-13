@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeBackendFunction } from "@/utils/backendFunctions";
 const TOOL_NAME = "presentations";
 
 const getSessionId = () => {
@@ -30,16 +30,12 @@ export const FeedbackButton = () => {
 
     setIsSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-feedback', {
-        body: {
-          tool_name: TOOL_NAME,
-          session_id: getSessionId(),
-          is_useful: isUseful,
-          comment: comment.trim() || undefined,
-        },
+      await invokeBackendFunction('send-feedback', {
+        tool_name: TOOL_NAME,
+        session_id: getSessionId(),
+        is_useful: isUseful,
+        comment: comment.trim() || undefined,
       });
-
-      if (error) throw error;
 
       toast.success("Спасибо за отзыв!");
       setOpen(false);
