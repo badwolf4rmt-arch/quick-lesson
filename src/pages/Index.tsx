@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { GraduationCap } from "lucide-react";
 import { AILoader } from "@/components/ui/ai-loader";
 import { reachGoal } from "@/utils/analytics";
+import { invokeBackendFunction } from "@/utils/backendFunctions";
 
 const GENERATION_TIMEOUT_MS = 300_000;
 
@@ -24,25 +25,11 @@ const invokeGeneratePresentation = async (config: PresentationConfig) => {
   const timeoutId = window.setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-presentation`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
-      body: JSON.stringify(config),
-      signal: controller.signal,
-    });
-
-    const text = await response.text();
-    const payload = text ? JSON.parse(text) : null;
-
-    if (!response.ok) {
-      throw new Error(payload?.error || `Ошибка генерации (${response.status})`);
-    }
-
-    return payload;
+    return await invokeBackendFunction<{ slides?: Presentation['slides'] }>(
+      'generate-presentation',
+      config,
+      { signal: controller.signal },
+    );
   } catch (error: any) {
     if (error?.name === 'AbortError') {
       throw new Error('Генерация заняла больше 5 минут. Попробуйте ещё раз или временно уменьшите количество слайдов.');
