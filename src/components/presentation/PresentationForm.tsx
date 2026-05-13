@@ -8,6 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PresentationConfig } from "@/types/presentation";
 import { Sparkles, ChevronDown, Settings } from "lucide-react";
+import { reachGoal } from "@/utils/analytics";
+
+const trackInput = (inputName: string) => {
+  reachGoal('aip_edit_form_input', { aip_edit_form_input: { input_name: inputName } });
+};
 
 interface PresentationFormProps {
   onSubmit: (config: PresentationConfig) => void;
@@ -107,7 +112,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               <Label htmlFor="subject">Предмет *</Label>
               <Select
                 value={config.subject}
-                onValueChange={(value) => setConfig({ ...config, subject: value })}
+                onValueChange={(value) => { setConfig({ ...config, subject: value }); trackInput('subject'); }}
               >
                 <SelectTrigger id="subject">
                   <SelectValue />
@@ -124,7 +129,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               <Label htmlFor="grade">Класс *</Label>
               <Select
                 value={config.grade.toString()}
-                onValueChange={(value) => setConfig({ ...config, grade: parseInt(value) })}
+                onValueChange={(value) => { setConfig({ ...config, grade: parseInt(value) }); trackInput('grade'); }}
               >
                 <SelectTrigger id="grade">
                   <SelectValue />
@@ -145,6 +150,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               placeholder="Например: Дроби. Сложение и вычитание"
               value={config.topic}
               onChange={(e) => setConfig({ ...config, topic: e.target.value })}
+              onBlur={() => { if (config.topic) trackInput('topic'); }}
               required
             />
           </div>
@@ -159,7 +165,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               max={MAX_SLIDES}
               value={slideCountInput}
               onChange={(e) => handleSlideCountInputChange(e.target.value)}
-              onBlur={normalizeSlideCountInput}
+              onBlur={() => { normalizeSlideCountInput(); trackInput('slideCount'); }}
               disabled={isLoading}
             />
           </div>
@@ -182,7 +188,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   <Label htmlFor="style">Стиль оформления</Label>
                   <Select
                     value={config.style}
-                    onValueChange={(value) => setConfig({ ...config, style: value })}
+                    onValueChange={(value) => { setConfig({ ...config, style: value }); trackInput('style'); }}
                   >
                     <SelectTrigger id="style">
                       <SelectValue />
@@ -199,7 +205,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   <Label htmlFor="format">Формат подачи</Label>
                   <Select
                     value={config.format}
-                    onValueChange={(value) => setConfig({ ...config, format: value })}
+                    onValueChange={(value) => { setConfig({ ...config, format: value }); trackInput('format'); }}
                   >
                     <SelectTrigger id="format">
                       <SelectValue />
@@ -220,6 +226,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   placeholder="Например: для объяснения новой темы, с акцентом на практические примеры"
                   value={config.additionalPrompt}
                   onChange={(e) => setConfig({ ...config, additionalPrompt: e.target.value })}
+                  onBlur={() => { if (config.additionalPrompt) trackInput('additionalPrompt'); }}
                   rows={2}
                 />
               </div>
@@ -231,6 +238,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   placeholder="Можете вставить основной текст урока для увеличения достоверности"
                   value={config.mainText}
                   onChange={(e) => setConfig({ ...config, mainText: e.target.value })}
+                  onBlur={() => { if (config.mainText) trackInput('mainText'); }}
                   rows={4}
                 />
               </div>
