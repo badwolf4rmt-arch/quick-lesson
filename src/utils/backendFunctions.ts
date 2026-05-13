@@ -12,12 +12,10 @@ const getFunctionsOrigin = () => {
   return `https://${projectRef}.functions.supabase.co`;
 };
 
-export const invokeBackendFunction = async <T>(
-  functionName: string,
-  body: unknown,
-  options?: { signal?: AbortSignal },
-): Promise<T> => {
-  const response = await fetch(`${getFunctionsOrigin()}/${functionName}`, {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const doFetch = async (functionName: string, body: unknown, signal?: AbortSignal) => {
+  return fetch(`${getFunctionsOrigin()}/${functionName}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -25,23 +23,59 @@ export const invokeBackendFunction = async <T>(
       Authorization: `Bearer ${PUBLISHABLE_KEY}`,
     },
     body: JSON.stringify(body),
-    signal: options?.signal,
+    signal,
   });
+};
 
-  const text = await response.text();
-  let payload: any = null;
+export const invokeBackendFunction = async <T>(
+  functionName: string,
+  body: unknown,
+  options?: { signal?: AbortSignal; retries?: number },
+): Promise<T> => {
+  const maxAttempts = (options?.retries ?? 2) + 1;
+  let lastError: any;
 
-  if (text) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      payload = JSON.parse(text);
-    } catch {
-      throw new Error("Некорректный JSON-ответ от сервера");
+      const response = await doFetch(functionName, body, options?.signal);
+
+      const text = await response.text();
+      let payload: any = null;
+
+      if (text) {
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          throw new Error("Некорректный JSON-ответ от сервера");
+        }
+      }
+
+      if (!response.ok) {
+        // Не ретраим клиентские ошибки (4xx, кроме 408/429)
+        if (response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429) {
+          throw new Error(payload?.error || `Ошибка запроса (${response.status})`);
+        }
+        throw new Error(payload?.error || `Ошибка запроса (${response.status})`);
+      }
+
+      return payload as T;
+    } catch (error: any) {
+      lastError = error;
+
+      // Не ретраим, если запрос отменён вручную
+      if (error?.name === "AbortError") throw error;
+
+      // Не ретраим клиентские ошибки
+      if (error?.message?.match(/Ошибка запроса \(4\d\d\)/) && !error.message.match(/\(408\)|\(429\)/)) {
+        throw error;
+      }
+
+      if (attempt < maxAttempts) {
+        await sleep(1000 * attempt);
+        continue;
+      }
     }
   }
 
-  if (!response.ok) {
-    throw new Error(payload?.error || `Ошибка запроса (${response.status})`);
-  }
-
-  return payload as T;
+  throw lastError ?? new Error("Не удалось выполнить запрос");
 };
