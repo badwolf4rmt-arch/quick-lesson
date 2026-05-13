@@ -126,6 +126,8 @@ ${mainText ? `Основной текст для использования:\n${
       body: JSON.stringify({
         model: 'openai/gpt-5-mini',
         max_tokens: 8000,
+        reasoning: { effort: 'minimal' },
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt + '\n\nВерни ответ строго в формате JSON как указано в системном промпте.' }

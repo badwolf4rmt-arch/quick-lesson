@@ -99,6 +99,7 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
       body: JSON.stringify({
         model: 'openai/gpt-5-mini',
         max_tokens: 4000,
+        reasoning: { effort: 'minimal' },
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
