@@ -12,8 +12,14 @@ import "./index.css";
 
   // Включаем прокси только не на localhost и не на доменах самой Lovable
   // (там Supabase доступен напрямую). На любом другом домене (Render, кастомный) — проксируем.
-  const isLocal = host === "localhost" || host === "127.0.0.1" || host.endsWith(".lovable.app") || host.endsWith(".lovable.dev");
-  if (isLocal) return;
+  const isLovableOrLocal =
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host.endsWith(".lovable.app") ||
+    host.endsWith(".lovable.dev") ||
+    host.endsWith(".lovableproject.com") ||
+    host.endsWith(".lovable.host");
+  if (isLovableOrLocal) return;
 
   const proxyBase = `${window.location.origin}/sb`;
   const originalFetch = window.fetch.bind(window);
