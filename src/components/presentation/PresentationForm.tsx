@@ -112,7 +112,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               <Label htmlFor="subject">Предмет *</Label>
               <Select
                 value={config.subject}
-                onValueChange={(value) => setConfig({ ...config, subject: value })}
+                onValueChange={(value) => { setConfig({ ...config, subject: value }); trackInput('subject'); }}
               >
                 <SelectTrigger id="subject">
                   <SelectValue />
@@ -129,7 +129,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               <Label htmlFor="grade">Класс *</Label>
               <Select
                 value={config.grade.toString()}
-                onValueChange={(value) => setConfig({ ...config, grade: parseInt(value) })}
+                onValueChange={(value) => { setConfig({ ...config, grade: parseInt(value) }); trackInput('grade'); }}
               >
                 <SelectTrigger id="grade">
                   <SelectValue />
@@ -150,6 +150,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               placeholder="Например: Дроби. Сложение и вычитание"
               value={config.topic}
               onChange={(e) => setConfig({ ...config, topic: e.target.value })}
+              onBlur={() => { if (config.topic) trackInput('topic'); }}
               required
             />
           </div>
@@ -164,7 +165,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               max={MAX_SLIDES}
               value={slideCountInput}
               onChange={(e) => handleSlideCountInputChange(e.target.value)}
-              onBlur={normalizeSlideCountInput}
+              onBlur={() => { normalizeSlideCountInput(); trackInput('slideCount'); }}
               disabled={isLoading}
             />
           </div>
