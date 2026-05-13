@@ -8,6 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PresentationConfig } from "@/types/presentation";
 import { Sparkles, ChevronDown, Settings } from "lucide-react";
+import { reachGoal } from "@/utils/analytics";
+
+const trackInput = (inputName: string) => {
+  reachGoal('aip_edit_form_input', { aip_edit_form_input: { input_name: inputName } });
+};
 
 interface PresentationFormProps {
   onSubmit: (config: PresentationConfig) => void;
