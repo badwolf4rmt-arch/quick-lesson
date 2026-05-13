@@ -8,7 +8,7 @@ services:
       # Прокси только к backend-функциям. Render wildcard подставляется как *.
       - type: rewrite
         source: /api/*
-        destination: https://fahrcihwemfxqlcprupu.functions.supabase.co/*
+        destination: https://fahrcihwemfxqlcprupu.functions.supabase.co/:splat
       # SPA fallback
       - type: rewrite
         source: /*
