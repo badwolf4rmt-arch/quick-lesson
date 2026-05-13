@@ -30,6 +30,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'openai/gpt-5-mini',
         max_tokens: 1000,
+        reasoning: { effort: 'minimal' },
         messages: [
           {
             role: 'user',
