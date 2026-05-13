@@ -238,6 +238,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   placeholder="Можете вставить основной текст урока для увеличения достоверности"
                   value={config.mainText}
                   onChange={(e) => setConfig({ ...config, mainText: e.target.value })}
+                  onBlur={() => { if (config.mainText) trackInput('mainText'); }}
                   rows={4}
                 />
               </div>
