@@ -5,10 +5,11 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
-      # Прокси к Supabase — обходит блокировки в РФ, т.к. запрос идёт на домен Render
+      # Прокси к backend — обходит блокировки в РФ, т.к. запрос идёт на домен Render
+      # Render wildcard подставляется как *, не как :splat.
       - type: rewrite
         source: /sb/*
-        destination: https://fahrcihwemfxqlcprupu.supabase.co/:splat
+        destination: https://fahrcihwemfxqlcprupu.supabase.co/*
       # SPA fallback
       - type: rewrite
         source: /*
