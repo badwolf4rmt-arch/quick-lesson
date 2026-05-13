@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Editor from "./pages/Editor";
 import NotFound from "./pages/NotFound";
-import { FeedbackButton } from "./components/FeedbackButton";
+
 
 const queryClient = new QueryClient();
 
@@ -15,7 +15,6 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <FeedbackButton />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
