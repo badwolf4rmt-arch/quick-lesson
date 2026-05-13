@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Download, Eye, Edit, Plus, ArrowLeft, GripVertical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF, exportToPPTX } from "@/utils/exportUtils";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
