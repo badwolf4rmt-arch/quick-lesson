@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: quick-lesson-i9xq
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /sb/*
+        destination: https://fahrcihwemfxqlcprupu.supabase.co/*
+      - type: rewrite
+        source: /*
+        destination: /index.html

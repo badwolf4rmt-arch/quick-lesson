@@ -3,7 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 
 // Прокси Supabase через домен Render, чтобы обойти блокировки в РФ.
-// На Render настроен rewrite: /sb/*  ->  https://fahrcihwemfxqlcprupu.supabase.co/:splat
+// На Render нужен rewrite: /sb/*  ->  https://fahrcihwemfxqlcprupu.supabase.co/*
 (() => {
   if (typeof window === "undefined") return;
 
