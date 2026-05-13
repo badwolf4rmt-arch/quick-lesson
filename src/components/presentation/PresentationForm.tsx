@@ -188,7 +188,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   <Label htmlFor="style">Стиль оформления</Label>
                   <Select
                     value={config.style}
-                    onValueChange={(value) => setConfig({ ...config, style: value })}
+                    onValueChange={(value) => { setConfig({ ...config, style: value }); trackInput('style'); }}
                   >
                     <SelectTrigger id="style">
                       <SelectValue />
@@ -205,7 +205,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   <Label htmlFor="format">Формат подачи</Label>
                   <Select
                     value={config.format}
-                    onValueChange={(value) => setConfig({ ...config, format: value })}
+                    onValueChange={(value) => { setConfig({ ...config, format: value }); trackInput('format'); }}
                   >
                     <SelectTrigger id="format">
                       <SelectValue />
@@ -226,6 +226,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   placeholder="Например: для объяснения новой темы, с акцентом на практические примеры"
                   value={config.additionalPrompt}
                   onChange={(e) => setConfig({ ...config, additionalPrompt: e.target.value })}
+                  onBlur={() => { if (config.additionalPrompt) trackInput('additionalPrompt'); }}
                   rows={2}
                 />
               </div>
