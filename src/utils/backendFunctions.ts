@@ -2,7 +2,17 @@ const PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
+const isLocalOrLovableHost = (hostname: string) =>
+  hostname === "localhost" ||
+  hostname === "127.0.0.1" ||
+  hostname.endsWith(".lovable.app") ||
+  hostname.endsWith(".lovableproject.com");
+
 const getFunctionsOrigin = () => {
+  if (typeof window !== "undefined" && !isLocalOrLovableHost(window.location.hostname)) {
+    return "/api";
+  }
+
   if (PROJECT_ID) {
     return `https://${PROJECT_ID}.functions.supabase.co`;
   }
