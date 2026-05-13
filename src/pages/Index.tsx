@@ -80,6 +80,12 @@ const Index = () => {
         slides: data.slides
       };
 
+      reachGoal('aip_generate_presentation_success', {
+        aip_generate_presentation_success: {
+          slides_count: String(data.slides.length),
+        }
+      });
+
       toast.success("Презентация создана! Перехожу к редактору...");
       
       setTimeout(() => {
