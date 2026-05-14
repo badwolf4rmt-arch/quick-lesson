@@ -234,8 +234,8 @@ const Editor = () => {
   if (!presentation) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10 shadow-sm">
+    <div className="min-h-screen bg-gradient-app">
+      <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-10 shadow-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
