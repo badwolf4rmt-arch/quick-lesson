@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,8 +7,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PresentationConfig } from "@/types/presentation";
-import { Sparkles, ChevronDown, Settings } from "lucide-react";
+import { Sparkles, ChevronDown, Settings, Paperclip, X, Loader2, FileText } from "lucide-react";
 import { reachGoal } from "@/utils/analytics";
+import { parseFileToText, ACCEPTED_FILE_TYPES } from "@/utils/fileParser";
+import { toast } from "sonner";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILES = 5;
+
+interface AttachedFile {
+  name: string;
+  size: number;
+  text: string;
+}
 
 const trackInput = (inputName: string) => {
   reachGoal('aip_edit_form_input', { aip_edit_form_input: { input_name: inputName } });
