@@ -93,7 +93,8 @@ async function getSearchQueries(slideTitle: string, slideContent: string, topic:
 - остальные — отдельные конкретные объекты/места/явления, НЕ склеивай разные объекты в один запрос;
 - 2–4 слова в каждом запросе;
 - преимущественно английский, но русские географические/исторические названия можно оставить;
-- запросы должны искать фотографии/иллюстрации, а не текст.
+- запросы должны искать фотографии/иллюстрации, а не текст;
+- ВАЖНО: запросы должны быть безопасными для детей школьного возраста. Запрещено: алкоголь, сигареты, наркотики, оружие, насилие, кровь, трупы, маньяки/преступники/диктаторы (Чикатило, Гитлер и т.п.), эротика/нагота, азартные игры. Если тема может выдать такие результаты — добавляй уточнения ("school", "education", "kids friendly", "illustration", "diagram", "cartoon").
 
 Верни СТРОГО JSON: {"queries":["query one","query two","query three","query four","query five"]}`,
           },
@@ -113,8 +114,46 @@ async function getSearchQueries(slideTitle: string, slideContent: string, topic:
 
   return fallbackQueries;
 }
+// Blocklist of unsafe / adult / disturbing terms (RU + EN). Applied to titles, URLs, queries.
+const UNSAFE_TERMS = [
+  // sexual / nudity
+  'nude', 'naked', 'nsfw', 'porn', 'porno', 'erotic', 'erotica', 'sex', 'sexy', 'xxx', 'fetish', 'lingerie', 'topless', 'bikini', 'boobs', 'breast', 'genital', 'penis', 'vagina', 'orgasm', 'escort', 'prostitut', 'hooker', 'strip', 'bdsm',
+  'голая', 'голый', 'голые', 'обнаж', 'эрот', 'порно', 'секс', 'интим', 'проститут', 'нагот', 'белье', 'нижнее бель',
+  // violence / weapons / gore / death
+  'gore', 'blood', 'bloody', 'corpse', 'dead body', 'murder', 'murderer', 'killer', 'serial killer', 'execution', 'massacre', 'torture', 'suicide', 'hanging', 'lynch', 'mutilat', 'autopsy', 'morgue', 'isis', 'terror', 'terrorist', 'beheading', 'gun', 'pistol', 'rifle', 'firearm', 'shooting', 'gunshot',
+  'труп', 'убийство', 'убийца', 'маньяк', 'казнь', 'расстрел', 'кровь', 'кровав', 'самоубийс', 'повешен', 'теракт', 'террорист', 'оружие', 'пистолет',
+  // notorious criminals / dictators sometimes triggered by random queries
+  'chikatilo', 'чикатило', 'битцевский', 'breivik', 'брейвик', 'gacy', 'manson', 'pedo', 'педофил',
+  // drugs / alcohol / smoking
+  'drug', 'drugs', 'cocaine', 'heroin', 'meth', 'marijuana', 'cannabis', 'weed', 'syringe', 'overdose',
+  'beer', 'wine', 'vodka', 'whiskey', 'whisky', 'cocktail', 'alcohol', 'drunk', 'drinking', 'bar party', 'pub',
+  'cigar', 'cigarette', 'smoking', 'tobacco', 'vape',
+  'наркотик', 'кокаин', 'героин', 'марихуан', 'каннабис', 'шприц',
+  'пиво', 'вино', 'водка', 'виски', 'коктейль', 'алкоголь', 'пьян', 'пьющ', 'выпив',
+  'сигарет', 'сигар', 'курени', 'табак', 'вейп',
+  // hate / racism
+  'nazi', 'swastika', 'racist', 'hitler', 'фашис', 'нацис', 'свастик', 'гитлер',
+  // misc adult themes
+  'casino', 'gambling', 'казино', 'азарт',
+];
+
+function isUnsafeText(text: string): boolean {
+  if (!text) return false;
+  const t = text.toLocaleLowerCase();
+  return UNSAFE_TERMS.some((term) => t.includes(term));
+}
+
+function filterSafeImages(images: ImageResult[]): ImageResult[] {
+  return images.filter((img) => {
+    const haystack = `${img.title || ''} ${img.url || ''} ${img.sourceUrl || ''}`;
+    return !isUnsafeText(haystack);
+  });
+}
+
 async function searchOpenverse(query: string): Promise<ImageResult[]> {
-  const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=12&license_type=all`;
+  if (isUnsafeText(query)) return [];
+  // mature=false hides adult content; filter_dead removes broken links
+  const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=12&license_type=all&mature=false&filter_dead=true`;
   const resp = await fetch(url, {
     headers: { 'User-Agent': 'QuickLesson/1.0 (educational presentations)' },
   });
@@ -133,6 +172,7 @@ async function searchOpenverse(query: string): Promise<ImageResult[]> {
 }
 
 async function searchWikimedia(query: string): Promise<ImageResult[]> {
+  if (isUnsafeText(query)) return [];
   // Search Wikimedia Commons for image files
   const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=24&gsrsearch=${encodeURIComponent(
     query
@@ -167,6 +207,7 @@ async function searchWikimedia(query: string): Promise<ImageResult[]> {
 }
 
 async function searchWikipedia(query: string, lang: 'ru' | 'en'): Promise<ImageResult[]> {
+  if (isUnsafeText(query)) return [];
   const apiUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=8&gsrsearch=${encodeURIComponent(
     query
   )}&prop=pageimages|info&pithumbsize=900&pilicense=any&inprop=url&origin=*`;
@@ -218,7 +259,7 @@ async function searchAllSources(query: string): Promise<ImageResult[]> {
     searchWikipedia(query, 'en').catch(() => []),
   ]);
 
-  return mergeImages([openverse, wikimedia, wikipediaRu, wikipediaEn]);
+  return filterSafeImages(mergeImages([openverse, wikimedia, wikipediaRu, wikipediaEn]));
 }
 
 serve(async (req) => {
@@ -234,7 +275,7 @@ serve(async (req) => {
       : await getSearchQueries(slideTitle, slideContent, topic, subject);
 
     const searchResults = await Promise.all(queries.map((query) => searchAllSources(query)));
-    const images = mergeImages(searchResults);
+    const images = filterSafeImages(mergeImages(searchResults));
     const query = queries.slice(0, 5).join(' · ');
 
     return new Response(
