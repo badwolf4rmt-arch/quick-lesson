@@ -351,7 +351,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               <div className="space-y-2">
                 <Label>Прикрепить файлы</Label>
                 <p className="text-xs text-muted-foreground">
-                  TXT, MD, PDF, DOCX, PPTX (до 10 МБ, не более {MAX_FILES} файлов). Текст будет извлечён и передан ИИ для генерации.
+                  TXT, MD, PDF, DOCX, PPTX, изображения (до 10 МБ, не более {MAX_FILES} файлов). Файл передаётся в ИИ как есть — без локальной обработки.
                 </p>
                 <input
                   ref={fileInputRef}
