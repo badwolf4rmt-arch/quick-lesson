@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Presentation } from "@/types/presentation";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize2, Minimize2, Type } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
@@ -17,6 +18,10 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
   const [index, setIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [imgRatio, setImgRatio] = useState<number | null>(null);
+  const [fontScale, setFontScale] = useState(() => {
+    const saved = localStorage.getItem("presentation-font-scale");
+    return saved ? parseFloat(saved) : 1;
+  });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const total = presentation.slides.length;
@@ -59,6 +64,10 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
     return () => document.removeEventListener("fullscreenchange", handleFsChange);
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem("presentation-font-scale", fontScale.toString());
+  }, [fontScale]);
+
   const toggleFullscreen = async () => {
     try {
       if (!document.fullscreenElement && containerRef.current) {
@@ -83,7 +92,21 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
       className="fixed inset-0 z-50 bg-gradient-to-br from-background via-background to-muted/30 flex flex-col font-serif"
     >
       {/* Top controls */}
-      <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-30 hover:opacity-100 transition-opacity">
+      <div className="absolute top-4 right-4 z-20 flex gap-2 items-center opacity-30 hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-border rounded-full px-3 py-1.5">
+          <Type className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <Slider
+            value={[fontScale]}
+            onValueChange={([v]) => setFontScale(v)}
+            min={0.75}
+            max={1.5}
+            step={0.05}
+            className="w-24"
+          />
+          <span className="text-xs text-muted-foreground font-sans w-9 text-right shrink-0">
+            {Math.round(fontScale * 100)}%
+          </span>
+        </div>
         <Button variant="secondary" size="sm" onClick={toggleFullscreen}>
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </Button>
@@ -94,7 +117,7 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
 
       {/* Slide content */}
       <div className="flex-1 flex items-center justify-center px-6 md:px-20 py-10 overflow-auto">
-        <div className="w-full max-w-7xl">
+        <div className="w-full max-w-7xl" style={{ zoom: fontScale }}>
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-10 text-foreground tracking-tight leading-tight">
             {slide.title}
           </h1>
