@@ -264,7 +264,7 @@ const Editor = () => {
             
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant={isPreview ? "default" : "outline"}
                 size="sm"
               onClick={() => {
                 if (!isPreview) reachGoal('aip_preview');
@@ -274,7 +274,7 @@ const Editor = () => {
                 {isPreview ? (
                   <>
                     <Edit className="h-4 w-4 mr-2" />
-                    Редактор
+                    Вернуться в редактор
                   </>
                 ) : (
                   <>
