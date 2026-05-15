@@ -18,7 +18,11 @@ const MAX_FILES = 5;
 interface AttachedFile {
   name: string;
   size: number;
-  text: string;
+  mimeType: string;
+  /** base64 без data: префикса (для PDF/изображений отдаём в модель напрямую) */
+  dataBase64?: string;
+  /** извлечённый текст (для txt/md/docx/pptx) */
+  text?: string;
 }
 
 const trackInput = (inputName: string) => {
