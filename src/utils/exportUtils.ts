@@ -231,8 +231,6 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
       valign: 'top',
     });
 
-    const content = markdownToText(slide.content);
-    const lines = content.split('\n').filter(l => l.trim());
 
     // Convert image with natural dimensions to keep its real aspect ratio
     let imgInfo: { data: string; w: number; h: number } | null = null;
