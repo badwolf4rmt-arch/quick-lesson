@@ -114,7 +114,7 @@ async function getSearchQueries(slideTitle: string, slideContent: string, topic:
   return fallbackQueries;
 }
 async function searchOpenverse(query: string): Promise<ImageResult[]> {
-  const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=20&license_type=all`;
+  const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=12&license_type=all`;
   const resp = await fetch(url, {
     headers: { 'User-Agent': 'QuickLesson/1.0 (educational presentations)' },
   });
@@ -135,7 +135,7 @@ async function searchOpenverse(query: string): Promise<ImageResult[]> {
 async function searchWikimedia(query: string): Promise<ImageResult[]> {
   // Search Wikimedia Commons for image files
   const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=24&gsrsearch=${encodeURIComponent(
-    'filetype:bitmap ' + query
+    query
   )}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=400&origin=*`;
   const resp = await fetch(searchUrl, {
     headers: { 'User-Agent': 'QuickLesson/1.0 (educational presentations)' },
@@ -166,6 +166,61 @@ async function searchWikimedia(query: string): Promise<ImageResult[]> {
   return results;
 }
 
+async function searchWikipedia(query: string, lang: 'ru' | 'en'): Promise<ImageResult[]> {
+  const apiUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=8&gsrsearch=${encodeURIComponent(
+    query
+  )}&prop=pageimages|info&pithumbsize=900&pilicense=any&inprop=url&origin=*`;
+  const resp = await fetch(apiUrl, {
+    headers: { 'User-Agent': 'QuickLesson/1.0 (educational presentations)' },
+  });
+  if (!resp.ok) {
+    console.error('Wikipedia error:', lang, resp.status, await resp.text());
+    return [];
+  }
+
+  const data = await resp.json();
+  const pages = Object.values(data?.query?.pages || {}) as any[];
+  return pages
+    .filter((p) => p?.thumbnail?.source)
+    .map((p) => ({
+      url: p.thumbnail.source,
+      thumbnail: p.thumbnail.source,
+      title: p.title || '',
+      source: `${lang}.wikipedia.org`,
+      sourceUrl: p.fullurl,
+    }));
+}
+
+function mergeImages(groups: ImageResult[][]): ImageResult[] {
+  const seen = new Set<string>();
+  const merged: ImageResult[] = [];
+  const max = Math.max(0, ...groups.map((group) => group.length));
+
+  for (let i = 0; i < max; i++) {
+    for (const group of groups) {
+      const image = group[i];
+      if (!image?.url) continue;
+      const key = (image.url || image.sourceUrl || image.title).toLocaleLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(image);
+    }
+  }
+
+  return merged.slice(0, 36);
+}
+
+async function searchAllSources(query: string): Promise<ImageResult[]> {
+  const [openverse, wikimedia, wikipediaRu, wikipediaEn] = await Promise.all([
+    searchOpenverse(query).catch(() => []),
+    searchWikimedia(query).catch(() => []),
+    searchWikipedia(query, 'ru').catch(() => []),
+    searchWikipedia(query, 'en').catch(() => []),
+  ]);
+
+  return mergeImages([openverse, wikimedia, wikipediaRu, wikipediaEn]);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -174,26 +229,16 @@ serve(async (req) => {
   try {
     const { slideTitle = '', slideContent = '', topic = '', subject = '', customQuery } = await req.json();
 
-    const rawQuery = (customQuery && String(customQuery).trim())
-      || await getKeywords(slideTitle, slideContent, topic, subject);
-    // Normalize: replace underscores/punctuation with spaces, collapse spaces
-    const query = rawQuery.replace(/[_\-+]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const queries = customQuery && String(customQuery).trim()
+      ? uniqueQueries([String(customQuery), ...extractFallbackQueries(slideTitle, slideContent, topic)])
+      : await getSearchQueries(slideTitle, slideContent, topic, subject);
 
-    // Run both sources in parallel and merge
-    const [openverse, wikimedia] = await Promise.all([
-      searchOpenverse(query).catch(() => []),
-      searchWikimedia(query).catch(() => []),
-    ]);
-    // Interleave so user sees variety
-    const images: ImageResult[] = [];
-    const max = Math.max(openverse.length, wikimedia.length);
-    for (let i = 0; i < max; i++) {
-      if (openverse[i]) images.push(openverse[i]);
-      if (wikimedia[i]) images.push(wikimedia[i]);
-    }
+    const searchResults = await Promise.all(queries.map((query) => searchAllSources(query)));
+    const images = mergeImages(searchResults);
+    const query = queries.slice(0, 5).join(' · ');
 
     return new Response(
-      JSON.stringify({ query, images }),
+      JSON.stringify({ query, queries, images }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
