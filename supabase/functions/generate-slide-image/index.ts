@@ -43,14 +43,17 @@ serve(async (req) => {
         'X-Title': 'Presentation Generator'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image',
+        model: 'black-forest-labs/flux.2-klein-4b',
         messages: [
           {
             role: 'user',
             content: finalPrompt
           }
         ],
-        modalities: ['image', 'text']
+        modalities: ['image'],
+        image_config: {
+          aspect_ratio: '16:9'
+        }
       }),
     });
 
