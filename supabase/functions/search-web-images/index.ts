@@ -258,7 +258,7 @@ async function searchAllSources(query: string): Promise<ImageResult[]> {
     searchWikipedia(query, 'en').catch(() => []),
   ]);
 
-  return mergeImages([openverse, wikimedia, wikipediaRu, wikipediaEn]);
+  return filterSafeImages(mergeImages([openverse, wikimedia, wikipediaRu, wikipediaEn]));
 }
 
 serve(async (req) => {
