@@ -242,7 +242,12 @@ const Editor = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/")}
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    "Вы уверены, что хотите выйти? Презентация будет потеряна, если вы её не экспортировали."
+                  );
+                  if (confirmed) navigate("/");
+                }}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Назад
