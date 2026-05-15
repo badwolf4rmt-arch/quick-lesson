@@ -1,8 +1,9 @@
 import { Presentation } from "@/types/presentation";
 import PptxGenJS from "pptxgenjs";
+import katex from "katex";
 import { validatePPTXBlob, validatePDFLayout } from "./exportValidators";
 
-// Helper to convert markdown to plain text and strip LaTeX
+// Plain-text version (used for PPTX which can't render HTML/MathML)
 function markdownToText(markdown: string): string {
   return markdown
     .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -12,8 +13,41 @@ function markdownToText(markdown: string): string {
     .replace(/^\s*\d+\.\s+/gm, '')
     .replace(/\[(.+?)\]\(.+?\)/g, '$1')
     .replace(/`(.+?)`/g, '$1')
-    .replace(/\$\$([^$]+)\$\$/g, (_, formula) => simplifyLatex(formula))
-    .replace(/\$([^$]+)\$/g, (_, formula) => simplifyLatex(formula));
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_, f) => simplifyLatex(f))
+    .replace(/\$([^$\n]+?)\$/g, (_, f) => simplifyLatex(f));
+}
+
+// HTML version with KaTeX-rendered formulas (used for PDF)
+function markdownToHTML(markdown: string): string {
+  const placeholders: string[] = [];
+  const stash = (html: string) => {
+    placeholders.push(html);
+    return `\u0000${placeholders.length - 1}\u0000`;
+  };
+
+  let s = markdown
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_m, f) => {
+      try {
+        return stash(katex.renderToString(f.trim(), { throwOnError: false, displayMode: true, output: 'html' }));
+      } catch {
+        return stash(`<code>${escapeHtml(f)}</code>`);
+      }
+    })
+    .replace(/\$([^$\n]+?)\$/g, (_m, f) => {
+      try {
+        return stash(katex.renderToString(f.trim(), { throwOnError: false, displayMode: false, output: 'html' }));
+      } catch {
+        return stash(`<code>${escapeHtml(f)}</code>`);
+      }
+    });
+
+  s = escapeHtml(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>');
+
+  s = s.replace(/\u0000(\d+)\u0000/g, (_m, i) => placeholders[Number(i)]);
+  return s;
 }
 
 const SUPERSCRIPT_MAP: Record<string, string> = {
@@ -52,6 +86,7 @@ const LATEX_SYMBOLS: Array<[RegExp, string]> = [
   [/\\degree/g, '°'], [/\\circ/g, '°'], [/\\ldots/g, '…'], [/\\dots/g, '…'],
   [/\\left/g, ''], [/\\right/g, ''], [/\\,|\\;|\\:|\\!/g, ' '], [/\\quad|\\qquad/g, '  '],
   [/\\text\{([^}]*)\}/g, '$1'], [/\\mathrm\{([^}]*)\}/g, '$1'], [/\\mathbf\{([^}]*)\}/g, '$1'],
+  [/\\mathop\{([^}]*)\}/g, '$1'], [/\\operatorname\{([^}]*)\}/g, '$1'],
 ];
 
 function simplifyLatex(formula: string): string {
@@ -253,6 +288,7 @@ export async function exportToPDF(presentation: Presentation): Promise<void> {
 <head>
   <meta charset="UTF-8">
   <title>${escapeHtml(presentation.config.topic)}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
   <style>
     @page {
       size: A4 landscape;
@@ -293,6 +329,7 @@ export async function exportToPDF(presentation: Presentation): Promise<void> {
       flex: 1;
       gap: 8mm;
       min-height: 0;
+      align-items: flex-start;
     }
     .body.no-image .content { flex: 1; }
     .image-wrap {
@@ -314,12 +351,14 @@ export async function exportToPDF(presentation: Presentation): Promise<void> {
       overflow: hidden;
     }
     .content p { margin: 0 0 4mm 0; }
+    .katex { font-size: 1em; }
+    .katex-display { margin: 4mm 0; text-align: left; }
   </style>
 </head>
 <body>
 ${presentation.slides.map(slide => {
-  const content = markdownToText(slide.content);
-  const paragraphs = content.split('\n').filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
+  const paragraphs = slide.content.split('\n').filter(l => l.trim())
+    .map(l => `<p>${markdownToHTML(l)}</p>`).join('');
   const hasImage = !!slide.imageUrl;
   return `<div class="slide">
     <h1>${escapeHtml(slide.title)}</h1>
