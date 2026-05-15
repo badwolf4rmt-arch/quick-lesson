@@ -16,6 +16,14 @@ export interface PresentationConfig {
   slideCount: number;
   additionalPrompt?: string;
   mainText?: string;
+  attachments?: Array<{
+    name: string;
+    mimeType: string;
+    /** base64-encoded file contents (without data: prefix) */
+    dataBase64?: string;
+    /** extracted text fallback for формats Gemini не понимает напрямую */
+    text?: string;
+  }>;
 }
 
 export interface Presentation {

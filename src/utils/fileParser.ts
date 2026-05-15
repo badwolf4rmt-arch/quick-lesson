@@ -69,4 +69,4 @@ export const parseFileToText = async (file: File): Promise<string> => {
 };
 
 export const ACCEPTED_FILE_TYPES =
-  ".txt,.md,.pdf,.pptx,.docx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  ".txt,.md,.pdf,.pptx,.docx,.png,.jpg,.jpeg,.webp,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*";
