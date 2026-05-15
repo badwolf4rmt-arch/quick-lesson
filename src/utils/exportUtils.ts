@@ -86,6 +86,7 @@ const LATEX_SYMBOLS: Array<[RegExp, string]> = [
   [/\\degree/g, '°'], [/\\circ/g, '°'], [/\\ldots/g, '…'], [/\\dots/g, '…'],
   [/\\left/g, ''], [/\\right/g, ''], [/\\,|\\;|\\:|\\!/g, ' '], [/\\quad|\\qquad/g, '  '],
   [/\\text\{([^}]*)\}/g, '$1'], [/\\mathrm\{([^}]*)\}/g, '$1'], [/\\mathbf\{([^}]*)\}/g, '$1'],
+  [/\\mathop\{([^}]*)\}/g, '$1'], [/\\operatorname\{([^}]*)\}/g, '$1'],
 ];
 
 function simplifyLatex(formula: string): string {
