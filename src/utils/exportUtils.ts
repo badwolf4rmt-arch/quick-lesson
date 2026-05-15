@@ -282,16 +282,7 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
         color: colors.text, fontFace: 'Arial', align: 'left', valign: 'top', paraSpaceAfter: 6,
       }
     );
-    } else {
-      pSlide.addText(
-        lines.map((l) => ({ text: l, options: { bullet: false, breakLine: true } })),
-        {
-          x: textX, y: textY, w: textW, h: textH,
-          fontSize: imgInfo ? 16 : 18,
-          color: colors.text, fontFace: 'Arial', align: 'left', valign: 'top', paraSpaceAfter: 6,
-        }
-      );
-    }
+  }
   }
 
   // Deterministic validation BEFORE writing the file to disk.
