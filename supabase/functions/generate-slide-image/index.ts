@@ -31,7 +31,7 @@ serve(async (req) => {
     };
 
     const styleModifier = styleDescriptions[style as keyof typeof styleDescriptions] || 'educational, clean, modern';
-    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. CRITICAL: 16:9 aspect ratio, horizontal orientation, wide format. NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS on the image. Pure visual elements only: icons, shapes, diagrams, illustrations, symbols. Focus on visual metaphors and imagery, not text.`;
+    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. STRICT REQUIREMENTS: Generate strictly in 16:9 aspect ratio (widescreen, horizontal landscape orientation, 1920x1080 proportions). The composition MUST fully fit within the 16:9 frame — do NOT crop, cut off, or truncate any subject, object, or important element. All key elements must be entirely visible inside the frame with comfortable margins. ABSOLUTELY NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS, NO CAPTIONS, NO LABELS, NO WATERMARKS, NO SIGNATURES anywhere on the image. Pure visual content only: icons, shapes, diagrams, illustrations, symbols, scenes. Focus on visual metaphors and imagery.`;
 
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
