@@ -64,6 +64,10 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
     return () => document.removeEventListener("fullscreenchange", handleFsChange);
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem("presentation-font-scale", fontScale.toString());
+  }, [fontScale]);
+
   const toggleFullscreen = async () => {
     try {
       if (!document.fullscreenElement && containerRef.current) {
