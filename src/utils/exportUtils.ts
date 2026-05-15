@@ -1,7 +1,56 @@
 import { Presentation } from "@/types/presentation";
 import PptxGenJS from "pptxgenjs";
 import katex from "katex";
+import "katex/dist/katex.min.css";
+import html2canvas from "html2canvas";
 import { validatePPTXBlob, validatePDFLayout } from "./exportValidators";
+
+// Render markdown+LaTeX content as a PNG dataURI via offscreen DOM + KaTeX + html2canvas
+async function renderContentToImage(
+  markdown: string,
+  opts: { widthPx: number; color: string; fontSizePx: number; bg: string }
+): Promise<{ dataUrl: string; widthPx: number; heightPx: number } | null> {
+  try {
+    const html = markdownToHTML(markdown);
+    const paragraphs = html
+      .split('\n')
+      .filter((l) => l.trim())
+      .map((l) => `<p style="margin:0 0 8px 0;">${l}</p>`) // tight paragraph spacing
+      .join('');
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-100000px';
+    container.style.top = '0';
+    container.style.width = `${opts.widthPx}px`;
+    container.style.padding = '0';
+    container.style.background = opts.bg;
+    container.style.color = opts.color;
+    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.fontSize = `${opts.fontSizePx}px`;
+    container.style.lineHeight = '1.4';
+    container.innerHTML = paragraphs;
+    document.body.appendChild(container);
+
+    // Wait a tick for fonts/layout
+    await new Promise((r) => setTimeout(r, 30));
+
+    const canvas = await html2canvas(container, {
+      backgroundColor: opts.bg,
+      scale: 2, // higher DPI for crisp formulas
+      logging: false,
+      useCORS: true,
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+    const widthPx = canvas.width / 2;
+    const heightPx = canvas.height / 2;
+    document.body.removeChild(container);
+    return { dataUrl, widthPx, heightPx };
+  } catch (e) {
+    console.error('renderContentToImage failed', e);
+    return null;
+  }
+}
 
 // Plain-text version (used for PPTX which can't render HTML/MathML)
 function markdownToText(markdown: string): string {
