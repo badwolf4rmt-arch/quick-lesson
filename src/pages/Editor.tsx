@@ -15,6 +15,16 @@ import "katex/dist/katex.min.css";
 import { AILoader } from "@/components/ui/ai-loader";
 import { reachGoal } from "@/utils/analytics";
 import { invokeBackendFunction } from "@/utils/backendFunctions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Editor = () => {
   const location = useLocation();
