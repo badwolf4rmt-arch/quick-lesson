@@ -43,14 +43,14 @@ serve(async (req) => {
         'X-Title': 'Presentation Generator'
       },
       body: JSON.stringify({
-        model: 'black-forest-labs/flux.2-klein-4b',
+        model: 'openai/gpt-5-image-mini',
         messages: [
           {
             role: 'user',
             content: finalPrompt
           }
         ],
-        modalities: ['image'],
+        modalities: ['image', 'text'],
         image_config: {
           aspect_ratio: '16:9'
         }
