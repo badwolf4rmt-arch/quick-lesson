@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,8 +7,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PresentationConfig } from "@/types/presentation";
-import { Sparkles, ChevronDown, Settings } from "lucide-react";
+import { Sparkles, ChevronDown, Settings, Paperclip, X, Loader2, FileText } from "lucide-react";
 import { reachGoal } from "@/utils/analytics";
+import { parseFileToText, ACCEPTED_FILE_TYPES } from "@/utils/fileParser";
+import { toast } from "sonner";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILES = 5;
+
+interface AttachedFile {
+  name: string;
+  size: number;
+  text: string;
+}
 
 const trackInput = (inputName: string) => {
   reachGoal('aip_edit_form_input', { aip_edit_form_input: { input_name: inputName } });
@@ -61,6 +72,53 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [isParsingFiles, setIsParsingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+
+    if (attachedFiles.length + files.length > MAX_FILES) {
+      toast.error(`Можно прикрепить не более ${MAX_FILES} файлов`);
+      return;
+    }
+
+    setIsParsingFiles(true);
+    try {
+      const parsed: AttachedFile[] = [];
+      for (const file of files) {
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(`Файл ${file.name} больше 10 МБ`);
+          continue;
+        }
+        try {
+          const text = await parseFileToText(file);
+          if (!text.trim()) {
+            toast.error(`Не удалось извлечь текст из ${file.name}`);
+            continue;
+          }
+          parsed.push({ name: file.name, size: file.size, text });
+          reachGoal('aip_attach_file');
+        } catch (err: any) {
+          toast.error(err?.message || `Ошибка чтения ${file.name}`);
+        }
+      }
+      if (parsed.length) {
+        setAttachedFiles((prev) => [...prev, ...parsed]);
+        toast.success(`Прикреплено файлов: ${parsed.length}`);
+      }
+    } finally {
+      setIsParsingFiles(false);
+    }
+  };
+
+  const removeFile = (idx: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSlideCountInputChange = (value: string) => {
     // Allow empty so user can clear and retype
     if (value === "") {
@@ -91,7 +149,22 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedSlideCount = clampSlideCount(Number(slideCountInput) || DEFAULT_SLIDES);
-    onSubmit({ ...config, slideCount: normalizedSlideCount });
+
+    const attachmentsBlock = attachedFiles.length
+      ? attachedFiles
+          .map((f) => `--- Файл: ${f.name} ---\n${f.text}`)
+          .join("\n\n")
+      : "";
+
+    const mergedMainText = [config.mainText?.trim(), attachmentsBlock]
+      .filter(Boolean)
+      .join("\n\n");
+
+    onSubmit({
+      ...config,
+      slideCount: normalizedSlideCount,
+      mainText: mergedMainText || undefined,
+    });
   };
 
   return (
@@ -241,6 +314,60 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   onBlur={() => { if (config.mainText) trackInput('mainText'); }}
                   rows={4}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Прикрепить файлы</Label>
+                <p className="text-xs text-muted-foreground">
+                  TXT, MD, PDF, DOCX, PPTX (до 10 МБ, не более {MAX_FILES} файлов). Текст будет извлечён и передан ИИ для генерации.
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_FILE_TYPES}
+                  multiple
+                  className="hidden"
+                  onChange={handleFilesSelected}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isParsingFiles || attachedFiles.length >= MAX_FILES}
+                  className="gap-2"
+                >
+                  {isParsingFiles ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-4 w-4" />
+                  )}
+                  {isParsingFiles ? "Чтение файлов..." : "Выбрать файлы"}
+                </Button>
+
+                {attachedFiles.length > 0 && (
+                  <ul className="mt-2 space-y-1.5">
+                    {attachedFiles.map((f, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-2 text-sm"
+                      >
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <span className="flex-1 truncate">{f.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {(f.text.length / 1000).toFixed(1)}k симв.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="text-muted-foreground hover:text-destructive shrink-0"
+                          aria-label="Удалить файл"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </CollapsibleContent>
           </Collapsible>
