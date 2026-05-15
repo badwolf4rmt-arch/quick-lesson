@@ -38,6 +38,7 @@ const Editor = () => {
   const [imageLoadingPhrases, setImageLoadingPhrases] = useState<{[key: string]: string[]}>({});
   const [slideLoadingPhrases, setSlideLoadingPhrases] = useState<{[key: string]: string[]}>({});
   const [isPreview, setIsPreview] = useState(false);
+  const [isPresenting, setIsPresenting] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
