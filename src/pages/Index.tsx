@@ -101,17 +101,20 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-app">
-      <div className="container mx-auto px-4 py-12">
-        <div className="bg-gradient-hero rounded-3xl shadow-soft px-6 py-12 md:py-16 mb-10 text-center space-y-4">
-          <div className="flex justify-center mb-2">
-            <div className="p-4 rounded-2xl bg-white/70 backdrop-blur-sm shadow-card">
-              <GraduationCap className="h-10 w-10 text-primary" />
+      <div className="container mx-auto px-4 py-10 md:py-14">
+        <div className="bg-gradient-hero rounded-3xl shadow-soft px-6 py-10 md:py-12 mb-8 text-center space-y-3">
+          <div className="flex justify-center mb-1">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-primary blur-xl opacity-40 rounded-2xl" />
+              <div className="relative h-14 w-14 rounded-2xl bg-gradient-primary shadow-glow flex items-center justify-center">
+                <GraduationCap className="h-7 w-7 text-primary-foreground" strokeWidth={2.2} />
+              </div>
             </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             AI-генератор презентаций
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
             Создавайте презентации к уроку за несколько минут с помощью искусственного интеллекта
           </p>
         </div>
