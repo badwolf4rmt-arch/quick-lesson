@@ -329,6 +329,7 @@ export async function exportToPDF(presentation: Presentation): Promise<void> {
       flex: 1;
       gap: 8mm;
       min-height: 0;
+      align-items: flex-start;
     }
     .body.no-image .content { flex: 1; }
     .image-wrap {
@@ -350,12 +351,14 @@ export async function exportToPDF(presentation: Presentation): Promise<void> {
       overflow: hidden;
     }
     .content p { margin: 0 0 4mm 0; }
+    .katex { font-size: 1em; }
+    .katex-display { margin: 4mm 0; text-align: left; }
   </style>
 </head>
 <body>
 ${presentation.slides.map(slide => {
-  const content = markdownToText(slide.content);
-  const paragraphs = content.split('\n').filter(l => l.trim()).map(l => `<p>${escapeHtml(l)}</p>`).join('');
+  const paragraphs = slide.content.split('\n').filter(l => l.trim())
+    .map(l => `<p>${markdownToHTML(l)}</p>`).join('');
   const hasImage = !!slide.imageUrl;
   return `<div class="slide">
     <h1>${escapeHtml(slide.title)}</h1>
