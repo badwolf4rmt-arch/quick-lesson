@@ -275,7 +275,17 @@ export const SlideEditor = ({
                   </>
                 )}
               </Button>
-              
+
+              <Button
+                onClick={openWebSearch}
+                variant="outline"
+                size="sm"
+                className="flex-1"
+              >
+                <Globe className="h-4 w-4 mr-2" />
+                Найти в интернете
+              </Button>
+
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
@@ -293,15 +303,6 @@ export const SlideEditor = ({
                 className="hidden"
               />
             </div>
-            <Button
-              onClick={openWebSearch}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <Globe className="h-4 w-4 mr-2" />
-              Найти в интернете
-            </Button>
           </div>
         </div>
       </div>
