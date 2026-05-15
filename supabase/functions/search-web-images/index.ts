@@ -171,6 +171,7 @@ async function searchOpenverse(query: string): Promise<ImageResult[]> {
 }
 
 async function searchWikimedia(query: string): Promise<ImageResult[]> {
+  if (isUnsafeText(query)) return [];
   // Search Wikimedia Commons for image files
   const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=24&gsrsearch=${encodeURIComponent(
     query
