@@ -57,7 +57,7 @@ async function getKeywords(slideTitle: string, slideContent: string, topic: stri
 }
 
 async function searchOpenverse(query: string): Promise<ImageResult[]> {
-  const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=24&license_type=all`;
+  const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=20&license_type=all`;
   const resp = await fetch(url, {
     headers: { 'User-Agent': 'QuickLesson/1.0 (educational presentations)' },
   });
@@ -66,13 +66,46 @@ async function searchOpenverse(query: string): Promise<ImageResult[]> {
     return [];
   }
   const data = await resp.json();
-  const results: ImageResult[] = (data.results || []).map((item: any) => ({
+  return (data.results || []).map((item: any) => ({
     url: item.url,
     thumbnail: item.thumbnail || item.url,
     title: item.title || '',
     source: item.source || item.provider || 'openverse',
     sourceUrl: item.foreign_landing_url,
   }));
+}
+
+async function searchWikimedia(query: string): Promise<ImageResult[]> {
+  // Search Wikimedia Commons for image files
+  const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=24&gsrsearch=${encodeURIComponent(
+    'filetype:bitmap ' + query
+  )}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=400&origin=*`;
+  const resp = await fetch(searchUrl, {
+    headers: { 'User-Agent': 'QuickLesson/1.0 (educational presentations)' },
+  });
+  if (!resp.ok) {
+    console.error('Wikimedia error:', resp.status, await resp.text());
+    return [];
+  }
+  const data = await resp.json();
+  const pages = data?.query?.pages || {};
+  const results: ImageResult[] = [];
+  for (const key of Object.keys(pages)) {
+    const p = pages[key];
+    const info = p?.imageinfo?.[0];
+    if (!info) continue;
+    const url = info.url;
+    if (!url) continue;
+    const lower = url.toLowerCase();
+    if (!/\.(jpe?g|png|gif|webp)$/.test(lower)) continue;
+    results.push({
+      url,
+      thumbnail: info.thumburl || url,
+      title: (p.title || '').replace(/^File:/, ''),
+      source: 'Wikimedia Commons',
+      sourceUrl: info.descriptionurl,
+    });
+  }
   return results;
 }
 
