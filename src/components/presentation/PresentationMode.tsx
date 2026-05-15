@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Presentation } from "@/types/presentation";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize2, Minimize2, Type } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
