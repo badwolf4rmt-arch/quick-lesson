@@ -312,7 +312,7 @@ const Editor = () => {
                     <img
                       src={slide.imageUrl}
                       alt={slide.title}
-                      className="w-full aspect-video object-cover"
+                      className="w-full h-auto block"
                     />
                   </div>
                 )}
