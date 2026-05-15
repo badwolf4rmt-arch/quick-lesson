@@ -25,8 +25,18 @@ interface SlideEditorProps {
   isGeneratingImage: boolean;
   isRegeneratingSlide: boolean;
   style: string;
+  topic?: string;
+  subject?: string;
   imageLoadingPhrases?: string[];
   slideLoadingPhrases?: string[];
+}
+
+interface WebImageResult {
+  url: string;
+  thumbnail: string;
+  title: string;
+  source: string;
+  sourceUrl?: string;
 }
 
 export const SlideEditor = ({
@@ -38,12 +48,62 @@ export const SlideEditor = ({
   isGeneratingImage,
   isRegeneratingSlide,
   style,
+  topic,
+  subject,
   imageLoadingPhrases,
   slideLoadingPhrases
 }: SlideEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedSlide, setEditedSlide] = useState(slide);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [webSearchOpen, setWebSearchOpen] = useState(false);
+  const [webSearchQuery, setWebSearchQuery] = useState("");
+  const [webSearchLoading, setWebSearchLoading] = useState(false);
+  const [webImages, setWebImages] = useState<WebImageResult[]>([]);
+
+  const runWebSearch = async (customQuery?: string) => {
+    setWebSearchLoading(true);
+    try {
+      const data = await invokeBackendFunction<{ query?: string; images?: WebImageResult[] }>(
+        'search-web-images',
+        {
+          slideTitle: slide.title,
+          slideContent: slide.content,
+          topic: topic || '',
+          subject: subject || '',
+          customQuery: customQuery,
+        }
+      );
+      if (data?.query) setWebSearchQuery(data.query);
+      setWebImages(data?.images || []);
+      if (!data?.images || data.images.length === 0) {
+        toast.info("Ничего не найдено, попробуйте другой запрос");
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Ошибка поиска изображений");
+    } finally {
+      setWebSearchLoading(false);
+    }
+  };
+
+  const openWebSearch = () => {
+    reachGoal('aip_search_web_image');
+    setWebSearchOpen(true);
+    setWebImages([]);
+    setWebSearchQuery("");
+    runWebSearch();
+  };
+
+  const pickWebImage = (img: WebImageResult) => {
+    const updatedSlide = { ...editedSlide, imageUrl: img.url };
+    setEditedSlide(updatedSlide);
+    onUpdate(updatedSlide);
+    reachGoal('aip_select_web_image');
+    setWebSearchOpen(false);
+    toast.success("Изображение добавлено");
+  };
+
 
   const handleSave = () => {
     onUpdate(editedSlide);
