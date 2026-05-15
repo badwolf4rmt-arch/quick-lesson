@@ -36,6 +36,15 @@ const Editor = () => {
     }
   }, [presentation, navigate]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   const handleUpdateSlide = (index: number, updatedSlide: Slide) => {
     if (!presentation) return;
     
