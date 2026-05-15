@@ -113,8 +113,46 @@ async function getSearchQueries(slideTitle: string, slideContent: string, topic:
 
   return fallbackQueries;
 }
+// Blocklist of unsafe / adult / disturbing terms (RU + EN). Applied to titles, URLs, queries.
+const UNSAFE_TERMS = [
+  // sexual / nudity
+  'nude', 'naked', 'nsfw', 'porn', 'porno', 'erotic', 'erotica', 'sex', 'sexy', 'xxx', 'fetish', 'lingerie', 'topless', 'bikini', 'boobs', 'breast', 'genital', 'penis', 'vagina', 'orgasm', 'escort', 'prostitut', 'hooker', 'strip', 'bdsm',
+  'голая', 'голый', 'голые', 'обнаж', 'эрот', 'порно', 'секс', 'интим', 'проститут', 'нагот', 'белье', 'нижнее бель',
+  // violence / weapons / gore / death
+  'gore', 'blood', 'bloody', 'corpse', 'dead body', 'murder', 'murderer', 'killer', 'serial killer', 'execution', 'massacre', 'torture', 'suicide', 'hanging', 'lynch', 'mutilat', 'autopsy', 'morgue', 'isis', 'terror', 'terrorist', 'beheading', 'gun', 'pistol', 'rifle', 'firearm', 'shooting', 'gunshot',
+  'труп', 'убийство', 'убийца', 'маньяк', 'казнь', 'расстрел', 'кровь', 'кровав', 'самоубийс', 'повешен', 'теракт', 'террорист', 'оружие', 'пистолет',
+  // notorious criminals / dictators sometimes triggered by random queries
+  'chikatilo', 'чикатило', 'битцевский', 'breivik', 'брейвик', 'gacy', 'manson', 'pedo', 'педофил',
+  // drugs / alcohol / smoking
+  'drug', 'drugs', 'cocaine', 'heroin', 'meth', 'marijuana', 'cannabis', 'weed', 'syringe', 'overdose',
+  'beer', 'wine', 'vodka', 'whiskey', 'whisky', 'cocktail', 'alcohol', 'drunk', 'drinking', 'bar party', 'pub',
+  'cigar', 'cigarette', 'smoking', 'tobacco', 'vape',
+  'наркотик', 'кокаин', 'героин', 'марихуан', 'каннабис', 'шприц',
+  'пиво', 'вино', 'водка', 'виски', 'коктейль', 'алкоголь', 'пьян', 'пьющ', 'выпив',
+  'сигарет', 'сигар', 'курени', 'табак', 'вейп',
+  // hate / racism
+  'nazi', 'swastika', 'racist', 'hitler', 'фашис', 'нацис', 'свастик', 'гитлер',
+  // misc adult themes
+  'casino', 'gambling', 'казино', 'азарт',
+];
+
+function isUnsafeText(text: string): boolean {
+  if (!text) return false;
+  const t = text.toLocaleLowerCase();
+  return UNSAFE_TERMS.some((term) => t.includes(term));
+}
+
+function filterSafeImages(images: ImageResult[]): ImageResult[] {
+  return images.filter((img) => {
+    const haystack = `${img.title || ''} ${img.url || ''} ${img.sourceUrl || ''}`;
+    return !isUnsafeText(haystack);
+  });
+}
+
 async function searchOpenverse(query: string): Promise<ImageResult[]> {
-  const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=12&license_type=all`;
+  if (isUnsafeText(query)) return [];
+  // mature=false hides adult content; filter_dead removes broken links
+  const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=12&license_type=all&mature=false&filter_dead=true`;
   const resp = await fetch(url, {
     headers: { 'User-Agent': 'QuickLesson/1.0 (educational presentations)' },
   });
