@@ -141,19 +141,37 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
     const content = markdownToText(slide.content);
     const lines = content.split('\n').filter(l => l.trim());
 
-    let imgData: string | null = null;
+    // Convert image with natural dimensions to keep its real aspect ratio
+    let imgInfo: { data: string; w: number; h: number } | null = null;
     if (slide.imageUrl) {
-      imgData = await imageToDataUri(slide.imageUrl);
+      const data = await imageToDataUri(slide.imageUrl);
+      if (data) {
+        const dims = await getImageDimensions(data);
+        const maxW = 5.5;
+        const maxH = 5.5;
+        const ratio = dims.w / dims.h;
+        let w = maxW;
+        let h = w / ratio;
+        if (h > maxH) {
+          h = maxH;
+          w = h * ratio;
+        }
+        imgInfo = { data, w, h };
+      }
     }
 
-    if (imgData) {
-      // Image left, text right
+    if (imgInfo) {
+      // Image left (centered in its box), text right
+      const boxX = 0.5;
+      const boxY = 1.5;
+      const boxW = 5.5;
+      const boxH = 5.5;
       pSlide.addImage({
-        data: imgData,
-        x: 0.5,
-        y: 1.5,
-        w: 5.5,
-        h: 5.5,
+        data: imgInfo.data,
+        x: boxX + (boxW - imgInfo.w) / 2,
+        y: boxY + (boxH - imgInfo.h) / 2,
+        w: imgInfo.w,
+        h: imgInfo.h,
       });
       pSlide.addText(
         lines.map(l => ({ text: l, options: { bullet: false, breakLine: true } })),
