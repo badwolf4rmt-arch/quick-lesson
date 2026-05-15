@@ -101,7 +101,7 @@ ${style === '3D-мультфильм' ? '- Генерируй imagePrompt в с�
 - "визуальные образы": минимум текста, акцент на описании ярких иллюстраций
 - "формальный": официальный документальный стиль, дружелюбный к ученику, но близкий к стилю учебника - строгая структура, определения, теоремы, доказательства`;
 
-    const userPrompt = `Создай презентацию для урока:
+    const userPromptText = `Создай презентацию для урока:
 
 Предмет: ${subject}
 Класс: ${grade}
@@ -113,7 +113,60 @@ ${mainText ? `Основной текст для использования:\n${
 Создай ${slideCount} слайдов. Первый слайд должен быть титульным с темой урока.
 Последний слайд должен содержать выводы или итоги.
 
-Для каждого imagePrompt создавай детальное описание в стиле "${style}", чтобы изображение соответствовало теме и было образовательным.`;
+Для каждого imagePrompt создавай детальное описание в стиле "${style}", чтобы изображение соответствовало теме и было образовательным.
+
+Верни ответ строго в формате JSON как указано в системном промпте.`;
+
+    // Собираем multimodal контент: текст + прикреплённые файлы (PDF/изображения как файлы, остальные как текст)
+    type ContentPart =
+      | { type: 'text'; text: string }
+      | { type: 'image_url'; image_url: { url: string } }
+      | { type: 'file'; file: { filename: string; file_data: string } };
+
+    const userContent: ContentPart[] = [{ type: 'text', text: userPromptText }];
+
+    if (Array.isArray(attachments)) {
+      for (const att of attachments) {
+        if (!att) continue;
+        const mime = att.mimeType || 'application/octet-stream';
+        if (att.dataBase64) {
+          const dataUrl = `data:${mime};base64,${att.dataBase64}`;
+          if (mime.startsWith('image/')) {
+            userContent.push({ type: 'image_url', image_url: { url: dataUrl } });
+          } else {
+            // PDF и прочие документы — как файл
+            userContent.push({
+              type: 'file',
+              file: { filename: att.name || 'file', file_data: dataUrl },
+            });
+          }
+        } else if (att.text) {
+          userContent.push({
+            type: 'text',
+            text: `\n--- Прикреплённый файл: ${att.name || ''} ---\n${att.text}`,
+          });
+        }
+      }
+    }
+
+    const hasFileAttachments = userContent.some(
+      (p) => p.type === 'file' || p.type === 'image_url',
+    );
+    // Для multimodal-входа используем Gemini (он умеет читать PDF/изображения нативно)
+    const model = hasFileAttachments ? 'google/gemini-2.5-flash' : 'openai/gpt-5-mini';
+
+    const requestBody: Record<string, unknown> = {
+      model,
+      max_tokens: 8000,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+    };
+    if (model.startsWith('openai/')) {
+      requestBody.reasoning = { effort: 'minimal' };
+    }
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -121,18 +174,9 @@ ${mainText ? `Основной текст для использования:\n${
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://lovable.dev',
-        'X-Title': 'Presentation Generator'
+        'X-Title': 'Presentation Generator',
       },
-      body: JSON.stringify({
-        model: 'openai/gpt-5-mini',
-        max_tokens: 8000,
-        reasoning: { effort: 'minimal' },
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt + '\n\nВерни ответ строго в формате JSON как указано в системном промпте.' }
-        ]
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
