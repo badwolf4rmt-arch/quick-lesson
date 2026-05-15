@@ -386,7 +386,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                         <FileText className="h-4 w-4 text-primary shrink-0" />
                         <span className="flex-1 truncate">{f.name}</span>
                         <span className="text-xs text-muted-foreground shrink-0">
-                          {(f.text.length / 1000).toFixed(1)}k симв.
+                          {(f.size / 1024).toFixed(0)} КБ
                         </span>
                         <button
                           type="button"
