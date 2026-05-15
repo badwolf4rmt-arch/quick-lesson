@@ -350,6 +350,8 @@ const Editor = () => {
                   isGeneratingImage={generatingImages.has(slide.id)}
                   isRegeneratingSlide={regeneratingSlides.has(slide.id)}
                   style={presentation.config.style}
+                  topic={presentation.config.topic}
+                  subject={presentation.config.subject}
                   imageLoadingPhrases={imageLoadingPhrases[slide.id]}
                   slideLoadingPhrases={slideLoadingPhrases[slide.id]}
                 />
