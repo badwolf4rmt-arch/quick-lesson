@@ -283,7 +283,6 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
       }
     );
   }
-  }
 
   // Deterministic validation BEFORE writing the file to disk.
   const blob = (await pptx.write({ outputType: "blob" })) as Blob;
