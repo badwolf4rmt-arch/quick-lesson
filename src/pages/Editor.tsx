@@ -389,6 +389,27 @@ const Editor = () => {
           </div>
         )}
       </main>
+
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Выйти из редактора?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Презентация не сохраняется автоматически. Если вы выйдете сейчас, все изменения будут потеряны.
+              Не забудьте сначала экспортировать её в PDF или PPTX.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Остаться</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => navigate("/")}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Выйти без сохранения
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
