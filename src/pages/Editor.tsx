@@ -36,6 +36,15 @@ const Editor = () => {
     }
   }, [presentation, navigate]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   const handleUpdateSlide = (index: number, updatedSlide: Slide) => {
     if (!presentation) return;
     
@@ -242,7 +251,12 @@ const Editor = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/")}
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    "Вы уверены, что хотите выйти? Презентация будет потеряна, если вы её не экспортировали."
+                  );
+                  if (confirmed) navigate("/");
+                }}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Назад
@@ -259,7 +273,7 @@ const Editor = () => {
             
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant={isPreview ? "default" : "outline"}
                 size="sm"
               onClick={() => {
                 if (!isPreview) reachGoal('aip_preview');
@@ -269,7 +283,7 @@ const Editor = () => {
                 {isPreview ? (
                   <>
                     <Edit className="h-4 w-4 mr-2" />
-                    Редактор
+                    Вернуться в редактор
                   </>
                 ) : (
                   <>
