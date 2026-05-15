@@ -18,6 +18,10 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
   const [index, setIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [imgRatio, setImgRatio] = useState<number | null>(null);
+  const [fontScale, setFontScale] = useState(() => {
+    const saved = localStorage.getItem("presentation-font-scale");
+    return saved ? parseFloat(saved) : 1;
+  });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const total = presentation.slides.length;
