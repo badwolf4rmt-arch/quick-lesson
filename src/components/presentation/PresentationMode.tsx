@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, CSSProperties } from "react";
 import { Presentation } from "@/types/presentation";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X, Maximize2, Minimize2, Type } from "lucide-react";
@@ -80,20 +80,29 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
     }
   };
 
-  // Decide layout based on image aspect ratio:
-  // - wide image (>1.4): stack on top
-  // - portrait/square (<=1.4): side by side
   const hasImage = !!slide.imageUrl;
   const sideBySide = hasImage && imgRatio !== null && imgRatio <= 1.4;
+
+  // Responsive font sizes that fit any screen, multiplied by user's scale.
+  const styleVars = { "--s": fontScale } as CSSProperties;
+  const titleStyle: CSSProperties = {
+    fontSize: `calc(min(5.5vh, 4.5vw) * var(--s))`,
+    lineHeight: 1.15,
+  };
+  const bodyStyle: CSSProperties = {
+    fontSize: `calc(min(2.8vh, 2vw) * var(--s))`,
+    lineHeight: 1.5,
+  };
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-gradient-to-br from-background via-background to-muted/30 flex flex-col font-serif"
+      style={styleVars}
+      className="fixed inset-0 z-50 bg-background flex flex-col font-serif overflow-hidden"
     >
       {/* Top controls */}
       <div className="absolute top-4 right-4 z-20 flex gap-2 items-center opacity-30 hover:opacity-100 transition-opacity">
-        <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-border rounded-full px-3 py-1.5">
+        <div className="flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-full px-3 py-1.5">
           <Type className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <Slider
             value={[fontScale]}
@@ -115,61 +124,68 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
         </Button>
       </div>
 
-      {/* Slide content */}
-      <div className="flex-1 flex items-center justify-center px-6 md:px-20 py-10 overflow-auto">
-        <div className="w-full max-w-7xl" style={{ zoom: fontScale }}>
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-10 text-foreground tracking-tight leading-tight">
-            {slide.title}
-          </h1>
+      {/* Slide content — fits viewport */}
+      <div className="flex-1 flex flex-col px-[5vw] pt-[5vh] pb-[8vh] gap-[2.5vh] min-h-0">
+        <h1
+          style={titleStyle}
+          className="font-bold text-foreground tracking-tight shrink-0"
+        >
+          {slide.title}
+        </h1>
 
-          {sideBySide ? (
-            <div className="flex flex-row gap-10 items-start">
-              <div className="flex-1 min-w-0 prose prose-2xl max-w-none text-foreground whitespace-pre-wrap [&_p]:text-2xl md:[&_p]:text-3xl [&_li]:text-2xl md:[&_li]:text-3xl [&_p]:leading-relaxed [&_li]:leading-relaxed">
-                <ReactMarkdown
-                  remarkPlugins={[remarkMath, remarkGfm]}
-                  rehypePlugins={[rehypeKatex]}
-                >
-                  {slide.content}
-                </ReactMarkdown>
-              </div>
-              <div className="w-[42%] shrink-0 rounded-xl overflow-hidden shadow-lg">
+        {sideBySide ? (
+          <div className="flex-1 flex flex-row gap-[3vw] items-center min-h-0">
+            <div
+              style={bodyStyle}
+              className="flex-1 min-w-0 max-h-full overflow-auto prose max-w-none text-foreground [&_p]:my-[0.4em] [&_li]:my-[0.2em] [&_ul]:my-[0.4em] [&_ol]:my-[0.4em]"
+            >
+              <ReactMarkdown
+                remarkPlugins={[remarkMath, remarkGfm]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {slide.content}
+              </ReactMarkdown>
+            </div>
+            <div className="h-full max-w-[45%] flex items-center justify-center shrink-0">
+              <img
+                src={slide.imageUrl}
+                alt={slide.title}
+                className="max-h-full max-w-full object-contain rounded-xl shadow-lg"
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  setImgRatio(img.naturalWidth / img.naturalHeight);
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col gap-[2.5vh] min-h-0">
+            {hasImage && (
+              <div className="flex justify-center items-start shrink-0" style={{ maxHeight: "45vh" }}>
                 <img
                   src={slide.imageUrl}
                   alt={slide.title}
-                  className="w-full h-auto block"
+                  className="max-h-[45vh] max-w-full object-contain rounded-xl shadow-lg"
                   onLoad={(e) => {
                     const img = e.currentTarget;
                     setImgRatio(img.naturalWidth / img.naturalHeight);
                   }}
                 />
               </div>
+            )}
+            <div
+              style={bodyStyle}
+              className="flex-1 min-h-0 overflow-auto prose max-w-none text-foreground [&_p]:my-[0.4em] [&_li]:my-[0.2em] [&_ul]:my-[0.4em] [&_ol]:my-[0.4em]"
+            >
+              <ReactMarkdown
+                remarkPlugins={[remarkMath, remarkGfm]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {slide.content}
+              </ReactMarkdown>
             </div>
-          ) : (
-            <>
-              {hasImage && (
-                <div className="mb-10 rounded-xl overflow-hidden flex justify-center shadow-lg">
-                  <img
-                    src={slide.imageUrl}
-                    alt={slide.title}
-                    className="max-w-full max-h-[50vh] h-auto block"
-                    onLoad={(e) => {
-                      const img = e.currentTarget;
-                      setImgRatio(img.naturalWidth / img.naturalHeight);
-                    }}
-                  />
-                </div>
-              )}
-              <div className="prose prose-2xl max-w-none text-foreground whitespace-pre-wrap [&_p]:text-2xl md:[&_p]:text-3xl [&_li]:text-2xl md:[&_li]:text-3xl [&_p]:leading-relaxed [&_li]:leading-relaxed">
-                <ReactMarkdown
-                  remarkPlugins={[remarkMath, remarkGfm]}
-                  rehypePlugins={[rehypeKatex]}
-                >
-                  {slide.content}
-                </ReactMarkdown>
-              </div>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -193,7 +209,7 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
       </Button>
 
       {/* Footer */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border text-sm text-muted-foreground shadow-card font-sans">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-card/90 backdrop-blur-sm border border-border text-sm text-muted-foreground shadow-card font-sans">
         {index + 1} / {total} <span className="mx-2">•</span>
         <span className="text-xs">← → пробел для навигации, Esc — выход</span>
       </div>
