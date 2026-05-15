@@ -117,10 +117,23 @@ serve(async (req) => {
   try {
     const { slideTitle = '', slideContent = '', topic = '', subject = '', customQuery } = await req.json();
 
-    const query = (customQuery && String(customQuery).trim())
+    const rawQuery = (customQuery && String(customQuery).trim())
       || await getKeywords(slideTitle, slideContent, topic, subject);
+    // Normalize: replace underscores/punctuation with spaces, collapse spaces
+    const query = rawQuery.replace(/[_\-+]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-    const images = await searchOpenverse(query);
+    // Run both sources in parallel and merge
+    const [openverse, wikimedia] = await Promise.all([
+      searchOpenverse(query).catch(() => []),
+      searchWikimedia(query).catch(() => []),
+    ]);
+    // Interleave so user sees variety
+    const images: ImageResult[] = [];
+    const max = Math.max(openverse.length, wikimedia.length);
+    for (let i = 0; i < max; i++) {
+      if (openverse[i]) images.push(openverse[i]);
+      if (wikimedia[i]) images.push(wikimedia[i]);
+    }
 
     return new Response(
       JSON.stringify({ query, images }),
