@@ -288,6 +288,7 @@ export async function exportToPDF(presentation: Presentation): Promise<void> {
 <head>
   <meta charset="UTF-8">
   <title>${escapeHtml(presentation.config.topic)}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
   <style>
     @page {
       size: A4 landscape;
