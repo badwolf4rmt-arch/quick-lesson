@@ -16,6 +16,7 @@ interface PresentationModeProps {
 export const PresentationMode = ({ presentation, onClose }: PresentationModeProps) => {
   const [index, setIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [imgRatio, setImgRatio] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const total = presentation.slides.length;
@@ -23,6 +24,10 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
 
   const next = () => setIndex((i) => Math.min(i + 1, total - 1));
   const prev = () => setIndex((i) => Math.max(i - 1, 0));
+
+  useEffect(() => {
+    setImgRatio(null);
+  }, [index]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -66,13 +71,19 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
     }
   };
 
+  // Decide layout based on image aspect ratio:
+  // - wide image (>1.4): stack on top
+  // - portrait/square (<=1.4): side by side
+  const hasImage = !!slide.imageUrl;
+  const sideBySide = hasImage && imgRatio !== null && imgRatio <= 1.4;
+
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-background flex flex-col"
+      className="fixed inset-0 z-50 bg-gradient-to-br from-background via-background to-muted/30 flex flex-col font-serif"
     >
       {/* Top controls */}
-      <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-40 hover:opacity-100 transition-opacity">
+      <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-30 hover:opacity-100 transition-opacity">
         <Button variant="secondary" size="sm" onClick={toggleFullscreen}>
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </Button>
@@ -82,28 +93,59 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
       </div>
 
       {/* Slide content */}
-      <div className="flex-1 flex items-center justify-center p-8 md:p-16 overflow-auto">
-        <div className="w-full max-w-6xl">
-          <h1 className="text-4xl md:text-5xl font-bold mb-8 text-foreground">
+      <div className="flex-1 flex items-center justify-center px-6 md:px-20 py-10 overflow-auto">
+        <div className="w-full max-w-7xl">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-10 text-foreground tracking-tight leading-tight">
             {slide.title}
           </h1>
-          {slide.imageUrl && (
-            <div className="mb-8 rounded-lg overflow-hidden flex justify-center">
-              <img
-                src={slide.imageUrl}
-                alt={slide.title}
-                className="max-w-full max-h-[55vh] h-auto block rounded-lg"
-              />
+
+          {sideBySide ? (
+            <div className="flex flex-row gap-10 items-start">
+              <div className="flex-1 min-w-0 prose prose-2xl max-w-none text-foreground whitespace-pre-wrap [&_p]:text-2xl md:[&_p]:text-3xl [&_li]:text-2xl md:[&_li]:text-3xl [&_p]:leading-relaxed [&_li]:leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkMath, remarkGfm]}
+                  rehypePlugins={[rehypeKatex]}
+                >
+                  {slide.content}
+                </ReactMarkdown>
+              </div>
+              <div className="w-[42%] shrink-0 rounded-xl overflow-hidden shadow-lg">
+                <img
+                  src={slide.imageUrl}
+                  alt={slide.title}
+                  className="w-full h-auto block"
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    setImgRatio(img.naturalWidth / img.naturalHeight);
+                  }}
+                />
+              </div>
             </div>
+          ) : (
+            <>
+              {hasImage && (
+                <div className="mb-10 rounded-xl overflow-hidden flex justify-center shadow-lg">
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.title}
+                    className="max-w-full max-h-[50vh] h-auto block"
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      setImgRatio(img.naturalWidth / img.naturalHeight);
+                    }}
+                  />
+                </div>
+              )}
+              <div className="prose prose-2xl max-w-none text-foreground whitespace-pre-wrap [&_p]:text-2xl md:[&_p]:text-3xl [&_li]:text-2xl md:[&_li]:text-3xl [&_p]:leading-relaxed [&_li]:leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkMath, remarkGfm]}
+                  rehypePlugins={[rehypeKatex]}
+                >
+                  {slide.content}
+                </ReactMarkdown>
+              </div>
+            </>
           )}
-          <div className="prose prose-xl max-w-none text-foreground whitespace-pre-wrap">
-            <ReactMarkdown
-              remarkPlugins={[remarkMath, remarkGfm]}
-              rehypePlugins={[rehypeKatex]}
-            >
-              {slide.content}
-            </ReactMarkdown>
-          </div>
         </div>
       </div>
 
@@ -128,7 +170,7 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
       </Button>
 
       {/* Footer */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border text-sm text-muted-foreground shadow-card">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border text-sm text-muted-foreground shadow-card font-sans">
         {index + 1} / {total} <span className="mx-2">•</span>
         <span className="text-xs">← → пробел для навигации, Esc — выход</span>
       </div>

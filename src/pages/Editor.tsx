@@ -300,17 +300,19 @@ const Editor = () => {
                   </>
                 )}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  reachGoal('aip_present');
-                  setIsPresenting(true);
-                }}
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Демонстрация
-              </Button>
+              {isPreview && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    reachGoal('aip_present');
+                    setIsPresenting(true);
+                  }}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Демонстрация
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
