@@ -274,7 +274,7 @@ serve(async (req) => {
       : await getSearchQueries(slideTitle, slideContent, topic, subject);
 
     const searchResults = await Promise.all(queries.map((query) => searchAllSources(query)));
-    const images = mergeImages(searchResults);
+    const images = filterSafeImages(mergeImages(searchResults));
     const query = queries.slice(0, 5).join(' · ');
 
     return new Response(
