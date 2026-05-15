@@ -80,6 +80,18 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
   const [isParsingFiles, setIsParsingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const idx = result.indexOf(",");
+        resolve(idx >= 0 ? result.slice(idx + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     e.target.value = "";
@@ -98,13 +110,34 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
           toast.error(`Файл ${file.name} больше 10 МБ`);
           continue;
         }
+        const lower = file.name.toLowerCase();
+        const isPdf = lower.endsWith(".pdf") || file.type === "application/pdf";
+        const isImage = file.type.startsWith("image/");
+
         try {
-          const text = await parseFileToText(file);
-          if (!text.trim()) {
-            toast.error(`Не удалось извлечь текст из ${file.name}`);
-            continue;
+          if (isPdf || isImage) {
+            // Отдаём файл модели в исходном виде — она сама прочитает (без локального парсинга)
+            const dataBase64 = await fileToBase64(file);
+            parsed.push({
+              name: file.name,
+              size: file.size,
+              mimeType: isPdf ? "application/pdf" : file.type,
+              dataBase64,
+            });
+          } else {
+            // Для txt/md/docx/pptx достаём текст локально
+            const text = await parseFileToText(file);
+            if (!text.trim()) {
+              toast.error(`Не удалось прочитать ${file.name}`);
+              continue;
+            }
+            parsed.push({
+              name: file.name,
+              size: file.size,
+              mimeType: file.type || "text/plain",
+              text,
+            });
           }
-          parsed.push({ name: file.name, size: file.size, text });
           reachGoal('aip_attach_file');
         } catch (err: any) {
           toast.error(err?.message || `Ошибка чтения ${file.name}`);
@@ -124,12 +157,10 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
   };
 
   const handleSlideCountInputChange = (value: string) => {
-    // Allow empty so user can clear and retype
     if (value === "") {
       setSlideCountInput("");
       return;
     }
-    // Only digits
     if (!/^\d+$/.test(value)) return;
 
     setSlideCountInput(value);
@@ -154,20 +185,17 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
     e.preventDefault();
     const normalizedSlideCount = clampSlideCount(Number(slideCountInput) || DEFAULT_SLIDES);
 
-    const attachmentsBlock = attachedFiles.length
-      ? attachedFiles
-          .map((f) => `--- Файл: ${f.name} ---\n${f.text}`)
-          .join("\n\n")
-      : "";
-
-    const mergedMainText = [config.mainText?.trim(), attachmentsBlock]
-      .filter(Boolean)
-      .join("\n\n");
-
     onSubmit({
       ...config,
       slideCount: normalizedSlideCount,
-      mainText: mergedMainText || undefined,
+      attachments: attachedFiles.length
+        ? attachedFiles.map((f) => ({
+            name: f.name,
+            mimeType: f.mimeType,
+            dataBase64: f.dataBase64,
+            text: f.text,
+          }))
+        : undefined,
     });
   };
 
