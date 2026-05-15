@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Image, RefreshCw, Trash2, Upload, X, Wand2 } from "lucide-react";
+import { Image, RefreshCw, Trash2, Upload, X, Wand2, Globe, Search, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { invokeBackendFunction } from "@/utils/backendFunctions";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
@@ -23,8 +25,18 @@ interface SlideEditorProps {
   isGeneratingImage: boolean;
   isRegeneratingSlide: boolean;
   style: string;
+  topic?: string;
+  subject?: string;
   imageLoadingPhrases?: string[];
   slideLoadingPhrases?: string[];
+}
+
+interface WebImageResult {
+  url: string;
+  thumbnail: string;
+  title: string;
+  source: string;
+  sourceUrl?: string;
 }
 
 export const SlideEditor = ({
@@ -36,12 +48,62 @@ export const SlideEditor = ({
   isGeneratingImage,
   isRegeneratingSlide,
   style,
+  topic,
+  subject,
   imageLoadingPhrases,
   slideLoadingPhrases
 }: SlideEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedSlide, setEditedSlide] = useState(slide);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [webSearchOpen, setWebSearchOpen] = useState(false);
+  const [webSearchQuery, setWebSearchQuery] = useState("");
+  const [webSearchLoading, setWebSearchLoading] = useState(false);
+  const [webImages, setWebImages] = useState<WebImageResult[]>([]);
+
+  const runWebSearch = async (customQuery?: string) => {
+    setWebSearchLoading(true);
+    try {
+      const data = await invokeBackendFunction<{ query?: string; images?: WebImageResult[] }>(
+        'search-web-images',
+        {
+          slideTitle: slide.title,
+          slideContent: slide.content,
+          topic: topic || '',
+          subject: subject || '',
+          customQuery: customQuery,
+        }
+      );
+      if (data?.query) setWebSearchQuery(data.query);
+      setWebImages(data?.images || []);
+      if (!data?.images || data.images.length === 0) {
+        toast.info("Ничего не найдено, попробуйте другой запрос");
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Ошибка поиска изображений");
+    } finally {
+      setWebSearchLoading(false);
+    }
+  };
+
+  const openWebSearch = () => {
+    reachGoal('aip_search_web_image');
+    setWebSearchOpen(true);
+    setWebImages([]);
+    setWebSearchQuery("");
+    runWebSearch();
+  };
+
+  const pickWebImage = (img: WebImageResult) => {
+    const updatedSlide = { ...editedSlide, imageUrl: img.url };
+    setEditedSlide(updatedSlide);
+    onUpdate(updatedSlide);
+    reachGoal('aip_select_web_image');
+    setWebSearchOpen(false);
+    toast.success("Изображение добавлено");
+  };
+
 
   const handleSave = () => {
     onUpdate(editedSlide);
@@ -231,9 +293,85 @@ export const SlideEditor = ({
                 className="hidden"
               />
             </div>
+            <Button
+              onClick={openWebSearch}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              <Globe className="h-4 w-4 mr-2" />
+              Найти в интернете
+            </Button>
           </div>
         </div>
       </div>
+
+      <Dialog open={webSearchOpen} onOpenChange={setWebSearchOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Поиск изображений в интернете</DialogTitle>
+            <DialogDescription>
+              Выберите подходящее изображение для слайда. Источник: Openverse (свободные лицензии).
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              runWebSearch(webSearchQuery);
+            }}
+            className="flex gap-2"
+          >
+            <Input
+              value={webSearchQuery}
+              onChange={(e) => setWebSearchQuery(e.target.value)}
+              placeholder="Ключевые слова для поиска"
+              className="flex-1"
+            />
+            <Button type="submit" disabled={webSearchLoading}>
+              {webSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            </Button>
+          </form>
+
+          <div className="overflow-y-auto flex-1 -mx-2 px-2">
+            {webSearchLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : webImages.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">
+                Изображения не найдены
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {webImages.map((img, idx) => (
+                  <button
+                    key={`${img.url}-${idx}`}
+                    type="button"
+                    onClick={() => pickWebImage(img)}
+                    className="group relative aspect-square rounded-md overflow-hidden bg-muted border border-border hover:border-primary transition-colors"
+                    title={img.title || img.source}
+                  >
+                    <img
+                      src={img.thumbnail}
+                      alt={img.title || 'web image'}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.opacity = '0.3';
+                      }}
+                    />
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-xs text-white truncate">{img.source}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
+
