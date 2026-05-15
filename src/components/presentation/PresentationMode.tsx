@@ -117,7 +117,7 @@ export const PresentationMode = ({ presentation, onClose }: PresentationModeProp
 
       {/* Slide content */}
       <div className="flex-1 flex items-center justify-center px-6 md:px-20 py-10 overflow-auto">
-        <div className="w-full max-w-7xl">
+        <div className="w-full max-w-7xl" style={{ zoom: fontScale }}>
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-10 text-foreground tracking-tight leading-tight">
             {slide.title}
           </h1>
