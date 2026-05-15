@@ -351,7 +351,7 @@ const Editor = () => {
                     />
                   </div>
                 )}
-                <div className="prose prose-lg max-w-none text-foreground whitespace-pre-wrap">
+                <div className="prose prose-lg max-w-none text-foreground [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1">
                   <ReactMarkdown
                     remarkPlugins={[remarkMath, remarkGfm]}
                     rehypePlugins={[rehypeKatex]}
