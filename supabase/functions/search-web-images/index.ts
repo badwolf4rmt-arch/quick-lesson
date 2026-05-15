@@ -206,6 +206,7 @@ async function searchWikimedia(query: string): Promise<ImageResult[]> {
 }
 
 async function searchWikipedia(query: string, lang: 'ru' | 'en'): Promise<ImageResult[]> {
+  if (isUnsafeText(query)) return [];
   const apiUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=8&gsrsearch=${encodeURIComponent(
     query
   )}&prop=pageimages|info&pithumbsize=900&pilicense=any&inprop=url&origin=*`;
