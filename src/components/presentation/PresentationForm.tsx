@@ -315,6 +315,60 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   rows={4}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Прикрепить файлы</Label>
+                <p className="text-xs text-muted-foreground">
+                  TXT, MD, PDF, DOCX, PPTX (до 10 МБ, не более {MAX_FILES} файлов). Текст будет извлечён и передан ИИ для генерации.
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_FILE_TYPES}
+                  multiple
+                  className="hidden"
+                  onChange={handleFilesSelected}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isParsingFiles || attachedFiles.length >= MAX_FILES}
+                  className="gap-2"
+                >
+                  {isParsingFiles ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-4 w-4" />
+                  )}
+                  {isParsingFiles ? "Чтение файлов..." : "Выбрать файлы"}
+                </Button>
+
+                {attachedFiles.length > 0 && (
+                  <ul className="mt-2 space-y-1.5">
+                    {attachedFiles.map((f, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-2 text-sm"
+                      >
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <span className="flex-1 truncate">{f.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {(f.text.length / 1000).toFixed(1)}k симв.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="text-muted-foreground hover:text-destructive shrink-0"
+                          aria-label="Удалить файл"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </CollapsibleContent>
           </Collapsible>
 
