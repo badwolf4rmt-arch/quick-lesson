@@ -1,8 +1,9 @@
 import { Presentation } from "@/types/presentation";
 import PptxGenJS from "pptxgenjs";
+import katex from "katex";
 import { validatePPTXBlob, validatePDFLayout } from "./exportValidators";
 
-// Helper to convert markdown to plain text and strip LaTeX
+// Plain-text version (used for PPTX which can't render HTML/MathML)
 function markdownToText(markdown: string): string {
   return markdown
     .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -12,8 +13,41 @@ function markdownToText(markdown: string): string {
     .replace(/^\s*\d+\.\s+/gm, '')
     .replace(/\[(.+?)\]\(.+?\)/g, '$1')
     .replace(/`(.+?)`/g, '$1')
-    .replace(/\$\$([^$]+)\$\$/g, (_, formula) => simplifyLatex(formula))
-    .replace(/\$([^$]+)\$/g, (_, formula) => simplifyLatex(formula));
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_, f) => simplifyLatex(f))
+    .replace(/\$([^$\n]+?)\$/g, (_, f) => simplifyLatex(f));
+}
+
+// HTML version with KaTeX-rendered formulas (used for PDF)
+function markdownToHTML(markdown: string): string {
+  const placeholders: string[] = [];
+  const stash = (html: string) => {
+    placeholders.push(html);
+    return `\u0000${placeholders.length - 1}\u0000`;
+  };
+
+  let s = markdown
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_m, f) => {
+      try {
+        return stash(katex.renderToString(f.trim(), { throwOnError: false, displayMode: true, output: 'html' }));
+      } catch {
+        return stash(`<code>${escapeHtml(f)}</code>`);
+      }
+    })
+    .replace(/\$([^$\n]+?)\$/g, (_m, f) => {
+      try {
+        return stash(katex.renderToString(f.trim(), { throwOnError: false, displayMode: false, output: 'html' }));
+      } catch {
+        return stash(`<code>${escapeHtml(f)}</code>`);
+      }
+    });
+
+  s = escapeHtml(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>');
+
+  s = s.replace(/\u0000(\d+)\u0000/g, (_m, i) => placeholders[Number(i)]);
+  return s;
 }
 
 const SUPERSCRIPT_MAP: Record<string, string> = {
