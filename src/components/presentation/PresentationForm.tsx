@@ -72,6 +72,53 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [isParsingFiles, setIsParsingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+
+    if (attachedFiles.length + files.length > MAX_FILES) {
+      toast.error(`Можно прикрепить не более ${MAX_FILES} файлов`);
+      return;
+    }
+
+    setIsParsingFiles(true);
+    try {
+      const parsed: AttachedFile[] = [];
+      for (const file of files) {
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(`Файл ${file.name} больше 10 МБ`);
+          continue;
+        }
+        try {
+          const text = await parseFileToText(file);
+          if (!text.trim()) {
+            toast.error(`Не удалось извлечь текст из ${file.name}`);
+            continue;
+          }
+          parsed.push({ name: file.name, size: file.size, text });
+          reachGoal('aip_attach_file');
+        } catch (err: any) {
+          toast.error(err?.message || `Ошибка чтения ${file.name}`);
+        }
+      }
+      if (parsed.length) {
+        setAttachedFiles((prev) => [...prev, ...parsed]);
+        toast.success(`Прикреплено файлов: ${parsed.length}`);
+      }
+    } finally {
+      setIsParsingFiles(false);
+    }
+  };
+
+  const removeFile = (idx: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSlideCountInputChange = (value: string) => {
     // Allow empty so user can clear and retype
     if (value === "") {
@@ -102,7 +149,22 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedSlideCount = clampSlideCount(Number(slideCountInput) || DEFAULT_SLIDES);
-    onSubmit({ ...config, slideCount: normalizedSlideCount });
+
+    const attachmentsBlock = attachedFiles.length
+      ? attachedFiles
+          .map((f) => `--- Файл: ${f.name} ---\n${f.text}`)
+          .join("\n\n")
+      : "";
+
+    const mergedMainText = [config.mainText?.trim(), attachmentsBlock]
+      .filter(Boolean)
+      .join("\n\n");
+
+    onSubmit({
+      ...config,
+      slideCount: normalizedSlideCount,
+      mainText: mergedMainText || undefined,
+    });
   };
 
   return (
