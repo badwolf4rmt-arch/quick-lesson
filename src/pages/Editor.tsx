@@ -403,6 +403,13 @@ const Editor = () => {
         )}
       </main>
 
+      {isPresenting && (
+        <PresentationMode
+          presentation={presentation}
+          onClose={() => setIsPresenting(false)}
+        />
+      )}
+
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
