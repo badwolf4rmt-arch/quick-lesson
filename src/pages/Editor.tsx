@@ -15,6 +15,16 @@ import "katex/dist/katex.min.css";
 import { AILoader } from "@/components/ui/ai-loader";
 import { reachGoal } from "@/utils/analytics";
 import { invokeBackendFunction } from "@/utils/backendFunctions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Editor = () => {
   const location = useLocation();
@@ -29,6 +39,7 @@ const Editor = () => {
   const [isPreview, setIsPreview] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
 
   useEffect(() => {
     if (!presentation) {
@@ -251,12 +262,7 @@ const Editor = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  const confirmed = window.confirm(
-                    "Вы уверены, что хотите выйти? Презентация будет потеряна, если вы её не экспортировали."
-                  );
-                  if (confirmed) navigate("/");
-                }}
+                onClick={() => setShowLeaveDialog(true)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Назад
@@ -383,6 +389,27 @@ const Editor = () => {
           </div>
         )}
       </main>
+
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Выйти из редактора?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Презентация не сохраняется автоматически. Если вы выйдете сейчас, все изменения будут потеряны.
+              Не забудьте сначала экспортировать её в PDF или PPTX.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Остаться</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => navigate("/")}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Выйти без сохранения
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
