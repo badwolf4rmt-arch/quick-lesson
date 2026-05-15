@@ -1,7 +1,56 @@
 import { Presentation } from "@/types/presentation";
 import PptxGenJS from "pptxgenjs";
 import katex from "katex";
+import "katex/dist/katex.min.css";
+import html2canvas from "html2canvas";
 import { validatePPTXBlob, validatePDFLayout } from "./exportValidators";
+
+// Render markdown+LaTeX content as a PNG dataURI via offscreen DOM + KaTeX + html2canvas
+async function renderContentToImage(
+  markdown: string,
+  opts: { widthPx: number; color: string; fontSizePx: number; bg: string }
+): Promise<{ dataUrl: string; widthPx: number; heightPx: number } | null> {
+  try {
+    const html = markdownToHTML(markdown);
+    const paragraphs = html
+      .split('\n')
+      .filter((l) => l.trim())
+      .map((l) => `<p style="margin:0 0 8px 0;">${l}</p>`) // tight paragraph spacing
+      .join('');
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-100000px';
+    container.style.top = '0';
+    container.style.width = `${opts.widthPx}px`;
+    container.style.padding = '0';
+    container.style.background = opts.bg;
+    container.style.color = opts.color;
+    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.fontSize = `${opts.fontSizePx}px`;
+    container.style.lineHeight = '1.4';
+    container.innerHTML = paragraphs;
+    document.body.appendChild(container);
+
+    // Wait a tick for fonts/layout
+    await new Promise((r) => setTimeout(r, 30));
+
+    const canvas = await html2canvas(container, {
+      backgroundColor: opts.bg,
+      scale: 2, // higher DPI for crisp formulas
+      logging: false,
+      useCORS: true,
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+    const widthPx = canvas.width / 2;
+    const heightPx = canvas.height / 2;
+    document.body.removeChild(container);
+    return { dataUrl, widthPx, heightPx };
+  } catch (e) {
+    console.error('renderContentToImage failed', e);
+    return null;
+  }
+}
 
 // Plain-text version (used for PPTX which can't render HTML/MathML)
 function markdownToText(markdown: string): string {
@@ -182,8 +231,6 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
       valign: 'top',
     });
 
-    const content = markdownToText(slide.content);
-    const lines = content.split('\n').filter(l => l.trim());
 
     // Convert image with natural dimensions to keep its real aspect ratio
     let imgInfo: { data: string; w: number; h: number } | null = null;
@@ -204,8 +251,16 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
       }
     }
 
+    const hasMath = /\$[^\n$]+\$|\$\$[\s\S]+?\$\$/.test(slide.content);
+    const lines = markdownToText(slide.content).split('\n').filter((l) => l.trim());
+
+    // Layout boxes
+    const textX = imgInfo ? 6.3 : 0.5;
+    const textY = 1.5;
+    const textW = imgInfo ? SLIDE_W - 6.8 : SLIDE_W - 1;
+    const textH = 5.5;
+
     if (imgInfo) {
-      // Image left (centered in its box), text right
       const boxX = 0.5;
       const boxY = 1.5;
       const boxW = 5.5;
@@ -213,39 +268,51 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
       pSlide.addImage({
         data: imgInfo.data,
         x: boxX + (boxW - imgInfo.w) / 2,
-        y: boxY + (boxH - imgInfo.h) / 2,
+        y: boxY,
         w: imgInfo.w,
         h: imgInfo.h,
       });
-      pSlide.addText(
-        lines.map(l => ({ text: l, options: { bullet: false, breakLine: true } })),
-        {
-          x: 6.3,
-          y: 1.5,
-          w: SLIDE_W - 6.8,
-          h: 5.5,
-          fontSize: 16,
-          color: colors.text,
-          fontFace: 'Arial',
-          align: 'left',
-          valign: 'top',
-          paraSpaceAfter: 6,
+    }
+
+    if (hasMath) {
+      // Render content (with KaTeX) to PNG and place it in the text area
+      const fontSizePx = imgInfo ? 22 : 24;
+      const widthPx = Math.round(textW * 96); // PPTX inch -> px @96dpi
+      const rendered = await renderContentToImage(slide.content, {
+        widthPx,
+        color: '#' + colors.text,
+        fontSizePx,
+        bg: '#' + colors.bg,
+      });
+
+      if (rendered) {
+        // Fit into text box, preserving aspect ratio
+        const ratio = rendered.widthPx / rendered.heightPx;
+        let w = textW;
+        let h = w / ratio;
+        if (h > textH) {
+          h = textH;
+          w = h * ratio;
         }
-      );
+        pSlide.addImage({ data: rendered.dataUrl, x: textX, y: textY, w, h });
+      } else {
+        // Fallback to plain text if rendering failed
+        pSlide.addText(
+          lines.map((l) => ({ text: l, options: { bullet: false, breakLine: true } })),
+          {
+            x: textX, y: textY, w: textW, h: textH,
+            fontSize: imgInfo ? 16 : 18,
+            color: colors.text, fontFace: 'Arial', align: 'left', valign: 'top', paraSpaceAfter: 6,
+          }
+        );
+      }
     } else {
       pSlide.addText(
-        lines.map(l => ({ text: l, options: { bullet: false, breakLine: true } })),
+        lines.map((l) => ({ text: l, options: { bullet: false, breakLine: true } })),
         {
-          x: 0.5,
-          y: 1.5,
-          w: SLIDE_W - 1,
-          h: 5.5,
-          fontSize: 18,
-          color: colors.text,
-          fontFace: 'Arial',
-          align: 'left',
-          valign: 'top',
-          paraSpaceAfter: 8,
+          x: textX, y: textY, w: textW, h: textH,
+          fontSize: imgInfo ? 16 : 18,
+          color: colors.text, fontFace: 'Arial', align: 'left', valign: 'top', paraSpaceAfter: 6,
         }
       );
     }
