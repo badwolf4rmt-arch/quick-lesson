@@ -12,9 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    const { subject, grade, topic, style, format, slideCount, additionalPrompt, mainText } = await req.json();
-    
-    console.log('Generating presentation:', { subject, grade, topic, style, format, slideCount });
+    const { subject, grade, topic, style, format, slideCount, additionalPrompt, mainText, attachments } = await req.json();
+
+    console.log('Generating presentation:', { subject, grade, topic, style, format, slideCount, attachments: attachments?.length || 0 });
 
     const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
     if (!OPENROUTER_API_KEY) {
