@@ -255,23 +255,23 @@ export const SlideEditor = ({
               />
             )}
             
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 onClick={() => onGenerateImage(slide.id, editedSlide.imagePrompt)}
                 disabled={isGeneratingImage}
                 variant="outline"
                 size="sm"
-                className="flex-1"
+                className="min-w-0 px-2"
               >
                 {slide.imageUrl ? (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Перегенерировать
+                    <RefreshCw className="h-4 w-4 mr-1 shrink-0" />
+                    <span className="truncate">Заново</span>
                   </>
                 ) : (
                   <>
-                    <Wand2 className="h-4 w-4 mr-2" />
-                    Сгенерировать
+                    <Wand2 className="h-4 w-4 mr-1 shrink-0" />
+                    <span className="truncate">Создать</span>
                   </>
                 )}
               </Button>
@@ -280,20 +280,20 @@ export const SlideEditor = ({
                 onClick={openWebSearch}
                 variant="outline"
                 size="sm"
-                className="flex-1"
+                className="min-w-0 px-2"
               >
-                <Globe className="h-4 w-4 mr-2" />
-                Найти в интернете
+                <Globe className="h-4 w-4 mr-1 shrink-0" />
+                <span className="truncate">Найти</span>
               </Button>
 
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
                 size="sm"
-                className="flex-1"
+                className="min-w-0 px-2"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Загрузить
+                <Upload className="h-4 w-4 mr-1 shrink-0" />
+                <span className="truncate">Загрузить</span>
               </Button>
               <input
                 ref={fileInputRef}
