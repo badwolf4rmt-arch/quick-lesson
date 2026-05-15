@@ -16,20 +16,63 @@ function markdownToText(markdown: string): string {
     .replace(/\$([^$]+)\$/g, (_, formula) => simplifyLatex(formula));
 }
 
+const SUPERSCRIPT_MAP: Record<string, string> = {
+  '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+  '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾',
+  'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ', 'd': 'ᵈ', 'e': 'ᵉ', 'f': 'ᶠ', 'g': 'ᵍ', 'h': 'ʰ', 'i': 'ⁱ',
+  'j': 'ʲ', 'k': 'ᵏ', 'l': 'ˡ', 'm': 'ᵐ', 'n': 'ⁿ', 'o': 'ᵒ', 'p': 'ᵖ', 'r': 'ʳ', 's': 'ˢ',
+  't': 'ᵗ', 'u': 'ᵘ', 'v': 'ᵛ', 'w': 'ʷ', 'x': 'ˣ', 'y': 'ʸ', 'z': 'ᶻ',
+};
+
+const SUBSCRIPT_MAP: Record<string, string> = {
+  '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+  '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎',
+  'a': 'ₐ', 'e': 'ₑ', 'h': 'ₕ', 'i': 'ᵢ', 'j': 'ⱼ', 'k': 'ₖ', 'l': 'ₗ', 'm': 'ₘ', 'n': 'ₙ',
+  'o': 'ₒ', 'p': 'ₚ', 'r': 'ᵣ', 's': 'ₛ', 't': 'ₜ', 'u': 'ᵤ', 'v': 'ᵥ', 'x': 'ₓ',
+};
+
+function toScript(input: string, map: Record<string, string>): string {
+  return input.split('').map(ch => map[ch] ?? map[ch.toLowerCase()] ?? ch).join('');
+}
+
+const LATEX_SYMBOLS: Array<[RegExp, string]> = [
+  [/\\times/g, '×'], [/\\cdot/g, '·'], [/\\div/g, '÷'], [/\\pm/g, '±'], [/\\mp/g, '∓'],
+  [/\\leq/g, '≤'], [/\\geq/g, '≥'], [/\\neq/g, '≠'], [/\\approx/g, '≈'], [/\\equiv/g, '≡'],
+  [/\\infty/g, '∞'], [/\\partial/g, '∂'], [/\\nabla/g, '∇'], [/\\forall/g, '∀'], [/\\exists/g, '∃'],
+  [/\\in/g, '∈'], [/\\notin/g, '∉'], [/\\subset/g, '⊂'], [/\\supset/g, '⊃'], [/\\cup/g, '∪'], [/\\cap/g, '∩'],
+  [/\\rightarrow/g, '→'], [/\\leftarrow/g, '←'], [/\\Rightarrow/g, '⇒'], [/\\Leftarrow/g, '⇐'], [/\\leftrightarrow/g, '↔'],
+  [/\\sum/g, '∑'], [/\\prod/g, '∏'], [/\\int/g, '∫'], [/\\oint/g, '∮'],
+  [/\\alpha/g, 'α'], [/\\beta/g, 'β'], [/\\gamma/g, 'γ'], [/\\delta/g, 'δ'], [/\\epsilon/g, 'ε'], [/\\varepsilon/g, 'ε'],
+  [/\\zeta/g, 'ζ'], [/\\eta/g, 'η'], [/\\theta/g, 'θ'], [/\\vartheta/g, 'ϑ'], [/\\iota/g, 'ι'], [/\\kappa/g, 'κ'],
+  [/\\lambda/g, 'λ'], [/\\mu/g, 'μ'], [/\\nu/g, 'ν'], [/\\xi/g, 'ξ'], [/\\pi/g, 'π'], [/\\rho/g, 'ρ'],
+  [/\\sigma/g, 'σ'], [/\\tau/g, 'τ'], [/\\upsilon/g, 'υ'], [/\\phi/g, 'φ'], [/\\varphi/g, 'φ'], [/\\chi/g, 'χ'],
+  [/\\psi/g, 'ψ'], [/\\omega/g, 'ω'],
+  [/\\Gamma/g, 'Γ'], [/\\Delta/g, 'Δ'], [/\\Theta/g, 'Θ'], [/\\Lambda/g, 'Λ'], [/\\Xi/g, 'Ξ'],
+  [/\\Pi/g, 'Π'], [/\\Sigma/g, 'Σ'], [/\\Phi/g, 'Φ'], [/\\Psi/g, 'Ψ'], [/\\Omega/g, 'Ω'],
+  [/\\degree/g, '°'], [/\\circ/g, '°'], [/\\ldots/g, '…'], [/\\dots/g, '…'],
+  [/\\left/g, ''], [/\\right/g, ''], [/\\,|\\;|\\:|\\!/g, ' '], [/\\quad|\\qquad/g, '  '],
+  [/\\text\{([^}]*)\}/g, '$1'], [/\\mathrm\{([^}]*)\}/g, '$1'], [/\\mathbf\{([^}]*)\}/g, '$1'],
+];
+
 function simplifyLatex(formula: string): string {
-  return formula
-    .replace(/\\\\?frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)')
-    .replace(/\\\\?sqrt\{([^}]+)\}/g, '√($1)')
-    .replace(/\^(\{[^}]+\}|[0-9a-zA-Z])/g, (_m, exp) => `^${exp.replace(/[{}]/g, '')}`)
-    .replace(/_(\{[^}]+\}|[0-9a-zA-Z])/g, (_m, sub) => `_${sub.replace(/[{}]/g, '')}`)
-    .replace(/\\\\?int/g, '∫')
-    .replace(/\\\\?sum/g, '∑')
-    .replace(/\\\\?pi/g, 'π')
-    .replace(/\\\\?alpha/g, 'α')
-    .replace(/\\\\?beta/g, 'β')
-    .replace(/\\\\?gamma/g, 'γ')
-    .replace(/\\\\?delta/g, 'δ')
-    .replace(/\\\\?theta/g, 'θ');
+  let s = formula;
+  // Iteratively reduce nested fractions and roots
+  for (let i = 0; i < 5; i++) {
+    s = s
+      .replace(/\\d?frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, '($1)/($2)')
+      .replace(/\\sqrt\s*\[([^\]]+)\]\s*\{([^{}]+)\}/g, '($2)^(1/$1)')
+      .replace(/\\sqrt\s*\{([^{}]+)\}/g, '√($1)');
+  }
+  // Symbols
+  for (const [re, rep] of LATEX_SYMBOLS) s = s.replace(re, rep);
+  // Superscripts / subscripts -> Unicode
+  s = s.replace(/\^\{([^}]+)\}/g, (_m, exp) => toScript(exp, SUPERSCRIPT_MAP));
+  s = s.replace(/\^([0-9a-zA-Z+\-])/g, (_m, exp) => toScript(exp, SUPERSCRIPT_MAP));
+  s = s.replace(/_\{([^}]+)\}/g, (_m, sub) => toScript(sub, SUBSCRIPT_MAP));
+  s = s.replace(/_([0-9a-zA-Z+\-])/g, (_m, sub) => toScript(sub, SUBSCRIPT_MAP));
+  // Cleanup leftover braces and backslashes
+  s = s.replace(/[{}]/g, '').replace(/\\\\/g, '\n').replace(/\\([a-zA-Z]+)/g, '$1');
+  return s.trim();
 }
 
 function escapeHtml(text: string): string {
@@ -48,6 +91,15 @@ const colorSchemes: Record<string, { bg: string; text: string; accent: string }>
   'комикс': { bg: 'FEF3C7', text: '78350F', accent: 'F59E0B' },
   '3D-мультфильм': { bg: 'E0E7FF', text: '312E81', accent: '8B5CF6' }
 };
+
+async function getImageDimensions(dataUri: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth || 16, h: img.naturalHeight || 9 });
+    img.onerror = () => resolve({ w: 16, h: 9 });
+    img.src = dataUri;
+  });
+}
 
 // Convert image URL to base64 data URI
 async function imageToDataUri(url: string): Promise<string | null> {
@@ -98,19 +150,37 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
     const content = markdownToText(slide.content);
     const lines = content.split('\n').filter(l => l.trim());
 
-    let imgData: string | null = null;
+    // Convert image with natural dimensions to keep its real aspect ratio
+    let imgInfo: { data: string; w: number; h: number } | null = null;
     if (slide.imageUrl) {
-      imgData = await imageToDataUri(slide.imageUrl);
+      const data = await imageToDataUri(slide.imageUrl);
+      if (data) {
+        const dims = await getImageDimensions(data);
+        const maxW = 5.5;
+        const maxH = 5.5;
+        const ratio = dims.w / dims.h;
+        let w = maxW;
+        let h = w / ratio;
+        if (h > maxH) {
+          h = maxH;
+          w = h * ratio;
+        }
+        imgInfo = { data, w, h };
+      }
     }
 
-    if (imgData) {
-      // Image left, text right
+    if (imgInfo) {
+      // Image left (centered in its box), text right
+      const boxX = 0.5;
+      const boxY = 1.5;
+      const boxW = 5.5;
+      const boxH = 5.5;
       pSlide.addImage({
-        data: imgData,
-        x: 0.5,
-        y: 1.5,
-        w: 5.5,
-        h: 5.5,
+        data: imgInfo.data,
+        x: boxX + (boxW - imgInfo.w) / 2,
+        y: boxY + (boxH - imgInfo.h) / 2,
+        w: imgInfo.w,
+        h: imgInfo.h,
       });
       pSlide.addText(
         lines.map(l => ({ text: l, options: { bullet: false, breakLine: true } })),
