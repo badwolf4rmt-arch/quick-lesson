@@ -253,8 +253,16 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
       }
     }
 
+    const hasMath = /\$[^\n$]+\$|\$\$[\s\S]+?\$\$/.test(slide.content);
+    const lines = markdownToText(slide.content).split('\n').filter((l) => l.trim());
+
+    // Layout boxes
+    const textX = imgInfo ? 6.3 : 0.5;
+    const textY = 1.5;
+    const textW = imgInfo ? SLIDE_W - 6.8 : SLIDE_W - 1;
+    const textH = 5.5;
+
     if (imgInfo) {
-      // Image left (centered in its box), text right
       const boxX = 0.5;
       const boxY = 1.5;
       const boxW = 5.5;
@@ -262,39 +270,51 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
       pSlide.addImage({
         data: imgInfo.data,
         x: boxX + (boxW - imgInfo.w) / 2,
-        y: boxY + (boxH - imgInfo.h) / 2,
+        y: boxY,
         w: imgInfo.w,
         h: imgInfo.h,
       });
-      pSlide.addText(
-        lines.map(l => ({ text: l, options: { bullet: false, breakLine: true } })),
-        {
-          x: 6.3,
-          y: 1.5,
-          w: SLIDE_W - 6.8,
-          h: 5.5,
-          fontSize: 16,
-          color: colors.text,
-          fontFace: 'Arial',
-          align: 'left',
-          valign: 'top',
-          paraSpaceAfter: 6,
+    }
+
+    if (hasMath) {
+      // Render content (with KaTeX) to PNG and place it in the text area
+      const fontSizePx = imgInfo ? 22 : 24;
+      const widthPx = Math.round(textW * 96); // PPTX inch -> px @96dpi
+      const rendered = await renderContentToImage(slide.content, {
+        widthPx,
+        color: '#' + colors.text,
+        fontSizePx,
+        bg: '#' + colors.bg,
+      });
+
+      if (rendered) {
+        // Fit into text box, preserving aspect ratio
+        const ratio = rendered.widthPx / rendered.heightPx;
+        let w = textW;
+        let h = w / ratio;
+        if (h > textH) {
+          h = textH;
+          w = h * ratio;
         }
-      );
+        pSlide.addImage({ data: rendered.dataUrl, x: textX, y: textY, w, h });
+      } else {
+        // Fallback to plain text if rendering failed
+        pSlide.addText(
+          lines.map((l) => ({ text: l, options: { bullet: false, breakLine: true } })),
+          {
+            x: textX, y: textY, w: textW, h: textH,
+            fontSize: imgInfo ? 16 : 18,
+            color: colors.text, fontFace: 'Arial', align: 'left', valign: 'top', paraSpaceAfter: 6,
+          }
+        );
+      }
     } else {
       pSlide.addText(
-        lines.map(l => ({ text: l, options: { bullet: false, breakLine: true } })),
+        lines.map((l) => ({ text: l, options: { bullet: false, breakLine: true } })),
         {
-          x: 0.5,
-          y: 1.5,
-          w: SLIDE_W - 1,
-          h: 5.5,
-          fontSize: 18,
-          color: colors.text,
-          fontFace: 'Arial',
-          align: 'left',
-          valign: 'top',
-          paraSpaceAfter: 8,
+          x: textX, y: textY, w: textW, h: textH,
+          fontSize: imgInfo ? 16 : 18,
+          color: colors.text, fontFace: 'Arial', align: 'left', valign: 'top', paraSpaceAfter: 6,
         }
       );
     }
