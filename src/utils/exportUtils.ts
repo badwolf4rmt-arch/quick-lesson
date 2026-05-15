@@ -92,6 +92,15 @@ const colorSchemes: Record<string, { bg: string; text: string; accent: string }>
   '3D-мультфильм': { bg: 'E0E7FF', text: '312E81', accent: '8B5CF6' }
 };
 
+async function getImageDimensions(dataUri: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth || 16, h: img.naturalHeight || 9 });
+    img.onerror = () => resolve({ w: 16, h: 9 });
+    img.src = dataUri;
+  });
+}
+
 // Convert image URL to base64 data URI
 async function imageToDataUri(url: string): Promise<string | null> {
   try {
