@@ -215,11 +215,11 @@ export const SlideEditor = ({
               <AILoader customPhrases={imageLoadingPhrases} text="Генерация изображения..." className="py-8" />
             </div>
           ) : slide.imageUrl ? (
-            <div className="relative aspect-video rounded-lg overflow-hidden bg-muted group">
+            <div className="relative rounded-lg overflow-hidden bg-muted group">
               <img
                 src={slide.imageUrl}
                 alt={slide.title}
-                className="w-full h-full object-cover"
+                className="w-full h-auto block"
               />
               <Button
                 size="sm"
