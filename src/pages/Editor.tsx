@@ -4,7 +4,8 @@ import { Presentation, Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, Eye, Edit, Plus, ArrowLeft, GripVertical, Loader2 } from "lucide-react";
+import { Download, Eye, Edit, Plus, ArrowLeft, GripVertical, Loader2, Play } from "lucide-react";
+import { PresentationMode } from "@/components/presentation/PresentationMode";
 import { toast } from "sonner";
 import { exportToPDF, exportToPPTX } from "@/utils/exportUtils";
 import ReactMarkdown from "react-markdown";
@@ -37,6 +38,7 @@ const Editor = () => {
   const [imageLoadingPhrases, setImageLoadingPhrases] = useState<{[key: string]: string[]}>({});
   const [slideLoadingPhrases, setSlideLoadingPhrases] = useState<{[key: string]: string[]}>({});
   const [isPreview, setIsPreview] = useState(false);
+  const [isPresenting, setIsPresenting] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
@@ -301,6 +303,17 @@ const Editor = () => {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => {
+                  reachGoal('aip_present');
+                  setIsPresenting(true);
+                }}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Демонстрация
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => handleExport('pdf')}
                 disabled={isExporting}
               >
@@ -389,6 +402,13 @@ const Editor = () => {
           </div>
         )}
       </main>
+
+      {isPresenting && (
+        <PresentationMode
+          presentation={presentation}
+          onClose={() => setIsPresenting(false)}
+        />
+      )}
 
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
         <AlertDialogContent>
