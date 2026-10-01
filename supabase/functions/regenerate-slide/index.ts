@@ -97,7 +97,7 @@ ${config.additionalPrompt ? `Дополнительно: ${config.additionalProm
         'X-Title': 'Slide Regenerator'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-6-luna',
+        model: 'openai/gpt-5.6-luna',
         max_tokens: 4000,
         reasoning: { effort: 'minimal' },
         messages: [
