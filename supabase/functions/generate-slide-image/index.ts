@@ -43,7 +43,7 @@ serve(async (req) => {
         'X-Title': 'Presentation Generator'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5-image-mini',
+        model: 'google/gemini-3.1-flash-image',
         messages: [
           {
             role: 'user',
