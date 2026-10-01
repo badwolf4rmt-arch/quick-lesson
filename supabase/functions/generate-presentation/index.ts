@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { subject, grade, topic, style, format, slideCount, additionalPrompt, mainText, attachments } = await req.json();
+    const { subject, grade, topic, style, format, slideCount, additionalPrompt, mainText, attachments, lessonPlan } = await req.json();
+    const plan = typeof lessonPlan === 'string' ? lessonPlan.trim().slice(0, 30000) : '';
 
     console.log('Generating presentation:', { subject, grade, topic, style, format, slideCount, attachments: attachments?.length || 0 });
 
