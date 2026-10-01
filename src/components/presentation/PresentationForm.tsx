@@ -67,7 +67,7 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
     subject: "Математика",
     grade: 5,
     topic: "",
-    style: "комикс",
+    style: "3D-мультфильм",
     format: "теория-практика",
     slideCount: DEFAULT_SLIDES,
   });
@@ -275,6 +275,18 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="lessonPlan">План урока</Label>
+            <Textarea
+              id="lessonPlan"
+              placeholder="Вставьте план урока — презентация будет сопровождать его, а не повторять дословно"
+              value={config.lessonPlan}
+              onChange={(e) => setConfig({ ...config, lessonPlan: e.target.value })}
+              onBlur={() => { if (config.lessonPlan) trackInput('lessonPlan'); }}
+              rows={5}
+            />
+          </div>
+
           <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
             <CollapsibleTrigger asChild>
               <Button
@@ -345,18 +357,6 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
                   onChange={(e) => setConfig({ ...config, mainText: e.target.value })}
                   onBlur={() => { if (config.mainText) trackInput('mainText'); }}
                   rows={4}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="lessonPlan">План урока</Label>
-                <Textarea
-                  id="lessonPlan"
-                  placeholder="Вставьте план урока — презентация будет сопровождать его, а не повторять дословно"
-                  value={config.lessonPlan}
-                  onChange={(e) => setConfig({ ...config, lessonPlan: e.target.value })}
-                  onBlur={() => { if (config.lessonPlan) trackInput('lessonPlan'); }}
-                  rows={5}
                 />
               </div>
 
