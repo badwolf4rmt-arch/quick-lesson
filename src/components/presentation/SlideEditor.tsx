@@ -104,9 +104,8 @@ export const SlideEditor = ({
   };
 
   const pickWebImage = (img: WebImageResult) => {
-    const updatedSlide = { ...editedSlide, imageUrl: img.url };
-    setEditedSlide(updatedSlide);
-    onUpdate(updatedSlide);
+    setEditedSlide({ ...editedSlide, imageUrl: img.url });
+    onUpdate({ ...slide, imageUrl: img.url });
     reachGoal('aip_select_web_image');
     setWebSearchOpen(false);
     toast.success("Изображение добавлено");
@@ -114,7 +113,7 @@ export const SlideEditor = ({
 
 
   const handleSave = () => {
-    onUpdate(editedSlide);
+    onUpdate({ ...editedSlide, imageUrl: slide.imageUrl });
     setIsEditing(false);
   };
 
@@ -141,9 +140,8 @@ export const SlideEditor = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       const imageUrl = event.target?.result as string;
-      const updatedSlide = { ...editedSlide, imageUrl };
-      setEditedSlide(updatedSlide);
-      onUpdate(updatedSlide);
+      setEditedSlide({ ...editedSlide, imageUrl });
+      onUpdate({ ...slide, imageUrl });
       reachGoal('aip_upload_image');
       toast.success("Изображение загружено");
     };
@@ -196,7 +194,7 @@ export const SlideEditor = ({
   };
 
   // keep dialog preview image in sync with externally generated/uploaded images
-  const dialogSlide = { ...editedSlide, imageUrl: slide.imageUrl === undefined && editedSlide.imageUrl === undefined ? undefined : (editedSlide.imageUrl ?? slide.imageUrl) };
+  const dialogSlide = { ...editedSlide, imageUrl: slide.imageUrl };
 
   return (
     <section className="rounded-3xl bg-muted/60 p-3 md:p-4">
