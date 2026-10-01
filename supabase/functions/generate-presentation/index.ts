@@ -188,7 +188,7 @@ ${attachmentsBlock}
       (p) => p.type === 'file' || p.type === 'image_url',
     );
     // Для multimodal-входа используем Gemini (он умеет читать PDF/изображения нативно)
-    const model = hasFileAttachments ? 'google/gemini-3.1-flash-lite' : 'openai/gpt-5-mini';
+    const model = hasFileAttachments ? 'google/gemini-3.1-pro-preview' : 'openai/gpt-5-mini';
 
     const requestBody: Record<string, unknown> = {
       model,
