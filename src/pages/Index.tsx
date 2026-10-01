@@ -75,9 +75,26 @@ const Index = () => {
         throw new Error("Некорректный ответ от сервера");
       }
 
+      let slides = data.slides;
+      try {
+        const notesRes = await invokeBackendFunction<{ notes?: string[] }>('generate-teacher-notes', {
+          subject: config.subject,
+          grade: config.grade,
+          topic: config.topic,
+          lessonPlan: config.lessonPlan,
+          slides: slides.map((s) => ({ title: s.title, content: s.content })),
+        });
+        if (Array.isArray(notesRes?.notes)) {
+          slides = slides.map((s, i) => ({ ...s, notes: notesRes.notes![i] || s.notes }));
+        }
+      } catch (err) {
+        console.warn('Teacher notes generation failed', err);
+        toast.error("Не удалось создать заметки для учителя — презентация готова без них");
+      }
+
       const presentation: Presentation = {
         config,
-        slides: data.slides
+        slides
       };
 
       reachGoal('aip_generate_presentation_success', {
