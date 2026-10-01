@@ -188,7 +188,7 @@ ${attachmentsBlock}
       (p) => p.type === 'file' || p.type === 'image_url',
     );
     // Для multimodal-входа используем Gemini (он умеет читать PDF/изображения нативно)
-    const model = hasFileAttachments ? 'google/gemini-2.5-flash' : 'openai/gpt-5-mini';
+    const model = hasFileAttachments ? 'google/gemini-3.1-pro-preview' : 'openai/gpt-5-mini';
 
     const requestBody: Record<string, unknown> = {
       model,
@@ -201,6 +201,8 @@ ${attachmentsBlock}
     };
     if (model.startsWith('openai/')) {
       requestBody.reasoning = { effort: 'minimal' };
+    } else if (model.startsWith('google/')) {
+      requestBody.reasoning = { effort: 'low' };
     }
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
