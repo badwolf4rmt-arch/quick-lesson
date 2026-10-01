@@ -58,7 +58,7 @@ const FORMATS = [
 
 const MIN_SLIDES = 1;
 const MAX_SLIDES = 30;
-const DEFAULT_SLIDES = 10;
+const DEFAULT_SLIDES = 15;
 
 const clampSlideCount = (value: number) => Math.min(MAX_SLIDES, Math.max(MIN_SLIDES, value));
 
