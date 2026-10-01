@@ -12,7 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, style } = await req.json();
+    const { prompt, style, grade } = await req.json();
+    const g = Number(grade) || 0;
+    const ageNote = g ? ` AUDIENCE: school students of grade ${g} (about ${g + 6}-${g + 7} years old). Any children or teens depicted must look ${g + 6}-${g + 7} years old. ${g <= 4 ? 'Make it simple, bright, friendly and fairy-tale-like.' : g <= 8 ? 'Make it engaging and dynamic, not babyish.' : 'Make it mature, serious and realistic in mood, not childish.'}` : '';
     
     console.log('Generating image:', { prompt, style });
 
@@ -31,7 +33,7 @@ serve(async (req) => {
     };
 
     const styleModifier = styleDescriptions[style as keyof typeof styleDescriptions] || 'educational, clean, modern';
-    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. STRICT REQUIREMENTS: Generate strictly in 16:9 aspect ratio (widescreen, horizontal landscape orientation, 1920x1080 proportions). The composition MUST fully fit within the 16:9 frame — do NOT crop, cut off, or truncate any subject, object, or important element. All key elements must be entirely visible inside the frame with comfortable margins. ABSOLUTELY NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS, NO CAPTIONS, NO LABELS, NO WATERMARKS, NO SIGNATURES anywhere on the image. Pure visual content only: icons, shapes, diagrams, illustrations, symbols, scenes. Focus on visual metaphors and imagery. PEOPLE: if the image contains people or characters, they MUST have European (Slavic) appearance — light skin, European facial features. Do NOT depict African, Asian, or other ethnicities; no forced ethnic diversity.`;
+    const finalPrompt = `${prompt}. Style: ${styleModifier}. Educational illustration. High quality. STRICT REQUIREMENTS: Generate strictly in 16:9 aspect ratio (widescreen, horizontal landscape orientation, 1920x1080 proportions). The composition MUST fully fit within the 16:9 frame — do NOT crop, cut off, or truncate any subject, object, or important element. All key elements must be entirely visible inside the frame with comfortable margins. ABSOLUTELY NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS, NO CAPTIONS, NO LABELS, NO WATERMARKS, NO SIGNATURES anywhere on the image. Pure visual content only: icons, shapes, diagrams, illustrations, symbols, scenes. Focus on visual metaphors and imagery. PEOPLE: if the image contains people or characters, they MUST have European (Slavic) appearance — light skin, European facial features. Do NOT depict African, Asian, or other ethnicities; no forced ethnic diversity.${ageNote}`;
 
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Presentation, Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";
@@ -114,6 +114,7 @@ const Editor = () => {
       const data = await invokeBackendFunction<{ imageUrl?: string }>('generate-slide-image', {
         prompt,
         style: presentation.config.style,
+        grade: presentation.config.grade,
       });
 
       if (!data || !data.imageUrl) {
@@ -148,6 +149,25 @@ const Editor = () => {
       });
     }
   };
+
+  // Auto-generate images for ~30% of slides chosen by the AI (needsImage)
+  const autoImagesStarted = useRef(false);
+  useEffect(() => {
+    if (!presentation || autoImagesStarted.current) return;
+    autoImagesStarted.current = true;
+    const slides = presentation.slides;
+    if (slides.some((s) => s.imageUrl)) return;
+    const target = Math.max(1, Math.round(slides.length * 0.3));
+    let picked = slides.filter((s) => s.needsImage && s.imagePrompt);
+    if (picked.length === 0) {
+      const step = slides.length / target;
+      picked = Array.from({ length: target }, (_, i) => slides[Math.floor(i * step)]);
+    }
+    picked.slice(0, target).forEach((s, i) => {
+      setTimeout(() => handleGenerateImage(s.id, s.imagePrompt), i * 800);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRegenerateSlide = async (slideId: string) => {
     if (!presentation) return;
