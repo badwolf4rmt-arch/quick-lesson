@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Image, RefreshCw, Trash2, Upload, X, Wand2, Globe, Search, Loader2, NotebookPen } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { SlidePreview, SlideNotes } from "./SlidePreview";
+import { Image, RefreshCw, Trash2, Upload, X, Wand2, Globe, Search, Loader2, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { invokeBackendFunction } from "@/utils/backendFunctions";
 import ReactMarkdown from "react-markdown";
@@ -29,6 +31,9 @@ interface SlideEditorProps {
   subject?: string;
   imageLoadingPhrases?: string[];
   slideLoadingPhrases?: string[];
+  index?: number;
+  total?: number;
+  readOnly?: boolean;
 }
 
 interface WebImageResult {
@@ -51,7 +56,10 @@ export const SlideEditor = ({
   topic,
   subject,
   imageLoadingPhrases,
-  slideLoadingPhrases
+  slideLoadingPhrases,
+  index = 0,
+  total = 1,
+  readOnly = false,
 }: SlideEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedSlide, setEditedSlide] = useState(slide);
@@ -96,9 +104,8 @@ export const SlideEditor = ({
   };
 
   const pickWebImage = (img: WebImageResult) => {
-    const updatedSlide = { ...editedSlide, imageUrl: img.url };
-    setEditedSlide(updatedSlide);
-    onUpdate(updatedSlide);
+    setEditedSlide({ ...editedSlide, imageUrl: img.url });
+    onUpdate({ ...slide, imageUrl: img.url });
     reachGoal('aip_select_web_image');
     setWebSearchOpen(false);
     toast.success("Изображение добавлено");
@@ -106,8 +113,14 @@ export const SlideEditor = ({
 
 
   const handleSave = () => {
-    onUpdate(editedSlide);
+    onUpdate({ ...editedSlide, imageUrl: slide.imageUrl });
     setIsEditing(false);
+  };
+
+  const openEdit = () => {
+    reachGoal('aip_edit_text');
+    setEditedSlide(slide);
+    setIsEditing(true);
   };
 
   const handleCancel = () => {
@@ -127,214 +140,171 @@ export const SlideEditor = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       const imageUrl = event.target?.result as string;
-      const updatedSlide = { ...editedSlide, imageUrl };
-      setEditedSlide(updatedSlide);
-      onUpdate(updatedSlide);
+      setEditedSlide({ ...editedSlide, imageUrl });
+      onUpdate({ ...slide, imageUrl });
       reachGoal('aip_upload_image');
       toast.success("Изображение загружено");
     };
     reader.readAsDataURL(file);
   };
 
-  if (isRegeneratingSlide) {
-    return (
-      <Card className="p-6 space-y-4 shadow-card">
-        <AILoader customPhrases={slideLoadingPhrases} text="Перегенерация слайда..." />
-      </Card>
-    );
-  }
 
-  return (
-    <Card className="p-6 space-y-4 shadow-card hover:shadow-soft transition-shadow">
-      <div className="flex justify-between items-start gap-4">
-        {isEditing ? (
-          <Input
-            value={editedSlide.title}
-            onChange={(e) => setEditedSlide({ ...editedSlide, title: e.target.value })}
-            className="flex-1 text-xl font-semibold"
-          />
-        ) : (
-          <h3 className="text-xl font-semibold text-foreground flex-1">{slide.title}</h3>
-        )}
-        
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onRegenerateSlide(slide.id)}
-            title="Перегенерировать содержание"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={onDelete}
-            title="Удалить слайд"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+  const iconBtn = "h-9 w-9 rounded-full text-foreground/70 hover:text-primary hover:bg-card";
+
+  const imageArea = (s: Slide, inDialog = false) => {
+    if (isGeneratingImage) {
+      return (
+        <div className="aspect-video rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted">
+          <AILoader customPhrases={imageLoadingPhrases} text="Генерация изображения..." className="py-6" />
         </div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="space-y-4">
-          {isEditing ? (
-            <Textarea
-              value={editedSlide.content}
-              onChange={(e) => setEditedSlide({ ...editedSlide, content: e.target.value })}
-              rows={8}
-              className="w-full"
-            />
-          ) : (
-            <div className="prose prose-sm max-w-none text-foreground">
-              <ReactMarkdown
-                remarkPlugins={[remarkMath, remarkGfm]}
-                rehypePlugins={[rehypeKatex]}
-              >
-                {slide.content}
-              </ReactMarkdown>
-            </div>
-          )}
-
-          <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <NotebookPen className="h-4 w-4 text-primary" />
-              Заметки для учителя
-            </div>
-            {isEditing ? (
-              <Textarea
-                value={editedSlide.notes || ''}
-                onChange={(e) => setEditedSlide({ ...editedSlide, notes: e.target.value })}
-                rows={8}
-                className="w-full text-sm"
-              />
-            ) : slide.notes ? (
-              <div className="space-y-3 text-sm">
-                {slide.notes.split(/\n\s*\n/).map((block, i) => {
-                  const [heading, ...rest] = block.split('\n');
-                  return (
-                    <div key={i}>
-                      <p className="font-semibold text-foreground">{heading}</p>
-                      <p className="text-muted-foreground whitespace-pre-line">{rest.join('\n')}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Заметок нет</p>
-            )}
-          </div>
-
-          {isEditing ? (
-            <div className="flex gap-2">
-              <Button onClick={handleSave} size="sm">Сохранить</Button>
-              <Button onClick={handleCancel} variant="outline" size="sm">Отмена</Button>
-            </div>
-          ) : (
-            <Button onClick={() => { reachGoal('aip_edit_text'); setIsEditing(true); }} variant="outline" size="sm">
-              Редактировать текст
+      );
+    }
+    if (s.imageUrl) {
+      return (
+        <div className="relative rounded-xl overflow-hidden bg-muted group">
+          <img src={s.imageUrl} alt={s.title} className="w-full h-auto block" />
+          {inDialog && (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => {
+                const updated = { ...editedSlide, imageUrl: undefined };
+                setEditedSlide(updated);
+                onUpdate({ ...slide, imageUrl: undefined });
+                toast.success("Изображение удалено");
+              }}
+            >
+              <X className="h-4 w-4" />
             </Button>
           )}
         </div>
-
-        <div className="space-y-4">
-          {isGeneratingImage ? (
-            <div className="aspect-video rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
-              <AILoader customPhrases={imageLoadingPhrases} text="Генерация изображения..." className="py-8" />
-            </div>
-          ) : slide.imageUrl ? (
-            <div className="relative rounded-lg overflow-hidden bg-muted group">
-              <img
-                src={slide.imageUrl}
-                alt={slide.title}
-                className="w-full h-auto block"
-              />
-              <Button
-                size="sm"
-                variant="destructive"
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => {
-                  const updatedSlide = { ...editedSlide, imageUrl: undefined };
-                  setEditedSlide(updatedSlide);
-                  onUpdate(updatedSlide);
-                  toast.success("Изображение удалено");
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="aspect-video rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
-              <div className="text-center p-4">
-                <Image className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Нет изображения</p>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            {isEditing && (
-              <Textarea
-                value={editedSlide.imagePrompt}
-                onChange={(e) => setEditedSlide({ ...editedSlide, imagePrompt: e.target.value })}
-                rows={3}
-                placeholder="Описание для генерации изображения"
-                className="text-sm"
-              />
-            )}
-            
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                onClick={() => onGenerateImage(slide.id, editedSlide.imagePrompt)}
-                disabled={isGeneratingImage}
-                variant="outline"
-                size="sm"
-                className="min-w-0 px-2"
-              >
-                {slide.imageUrl ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-1 shrink-0" />
-                    <span className="truncate">Заново</span>
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="h-4 w-4 mr-1 shrink-0" />
-                    <span className="truncate">Создать</span>
-                  </>
-                )}
-              </Button>
-
-              <Button
-                onClick={openWebSearch}
-                variant="outline"
-                size="sm"
-                className="min-w-0 px-2"
-              >
-                <Globe className="h-4 w-4 mr-1 shrink-0" />
-                <span className="truncate">Найти</span>
-              </Button>
-
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                size="sm"
-                className="min-w-0 px-2"
-              >
-                <Upload className="h-4 w-4 mr-1 shrink-0" />
-                <span className="truncate">Загрузить</span>
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </div>
-          </div>
+      );
+    }
+    if (!inDialog) return null;
+    return (
+      <div className="aspect-video rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted">
+        <div className="text-center p-4">
+          <Image className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Нет изображения</p>
         </div>
       </div>
+    );
+  };
+
+  // keep dialog preview image in sync with externally generated/uploaded images
+  const dialogSlide = { ...editedSlide, imageUrl: slide.imageUrl };
+
+  return (
+    <section className="rounded-3xl bg-muted/60 p-3 md:p-4">
+      <div className="flex items-center justify-between px-2 pb-3 pt-1">
+        <span className="text-base text-muted-foreground">слайд {index + 1}/{total}</span>
+        {!readOnly && (
+          <div className="flex gap-1">
+            <Button size="icon" variant="ghost" className={iconBtn} onClick={openEdit} title="Редактировать слайд">
+              <Pencil className="h-[18px] w-[18px]" />
+            </Button>
+            <Button size="icon" variant="ghost" className={iconBtn} onClick={() => onRegenerateSlide(slide.id)} disabled={isRegeneratingSlide} title="Перегенерировать содержание">
+              <RefreshCw className="h-[18px] w-[18px]" />
+            </Button>
+            <Button size="icon" variant="ghost" className={iconBtn} onClick={onDelete} title="Удалить слайд">
+              <Trash2 className="h-[18px] w-[18px]" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]">
+        {isRegeneratingSlide ? (
+          <Card className="p-6 rounded-2xl min-h-[22rem] flex items-center justify-center">
+            <AILoader customPhrases={slideLoadingPhrases} text="Перегенерация слайда..." />
+          </Card>
+        ) : (
+          <SlidePreview slide={slide} imageSlot={imageArea(slide) ?? undefined} />
+        )}
+        <div className="px-3 py-2">
+          <h4 className="text-base font-semibold text-foreground mb-3">Заметки для учителя</h4>
+          <SlideNotes notes={slide.notes} />
+        </div>
+      </div>
+
+      <Dialog open={isEditing} onOpenChange={(o) => { if (!o) handleCancel(); }}>
+        <DialogContent className="max-w-[min(96vw,1400px)] w-full h-[92vh] p-0 gap-0 bg-muted border-0 overflow-hidden">
+          <div className="grid h-full gap-3 p-3 pt-10 lg:grid-cols-[minmax(0,1fr)_26rem] min-h-0">
+            <div className="rounded-3xl bg-card p-6 md:p-8 overflow-y-auto min-h-0">
+              <DialogHeader className="mb-6 text-left">
+                <DialogTitle className="text-2xl md:text-3xl font-medium">Редактирование слайда {index + 1}</DialogTitle>
+                <DialogDescription className="sr-only">Изменения отображаются в превью слева</DialogDescription>
+              </DialogHeader>
+              <div className="rounded-3xl bg-muted/60 p-2">
+                <SlidePreview slide={dialogSlide} imageSlot={imageArea(dialogSlide, true) ?? undefined} />
+              </div>
+            </div>
+
+            <div className="rounded-3xl bg-card flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                <div className="space-y-2">
+                  <Label>Заголовок<span className="text-destructive">*</span></Label>
+                  <Textarea
+                    value={editedSlide.title}
+                    onChange={(e) => setEditedSlide({ ...editedSlide, title: e.target.value })}
+                    rows={2}
+                    className="bg-muted/60 border-0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Содержание слайда</Label>
+                  <Textarea
+                    value={editedSlide.content}
+                    onChange={(e) => setEditedSlide({ ...editedSlide, content: e.target.value })}
+                    rows={8}
+                    className="bg-muted/60 border-0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Изображение</Label>
+                  <Textarea
+                    value={editedSlide.imagePrompt}
+                    onChange={(e) => setEditedSlide({ ...editedSlide, imagePrompt: e.target.value })}
+                    rows={3}
+                    placeholder="Описание для генерации изображения"
+                    className="bg-muted/60 border-0 text-sm"
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button onClick={() => onGenerateImage(slide.id, editedSlide.imagePrompt)} disabled={isGeneratingImage} variant="outline" size="sm" className="min-w-0 px-2">
+                      {slide.imageUrl ? <RefreshCw className="h-4 w-4 mr-1 shrink-0" /> : <Wand2 className="h-4 w-4 mr-1 shrink-0" />}
+                      <span className="truncate">{slide.imageUrl ? "Заново" : "Создать"}</span>
+                    </Button>
+                    <Button onClick={openWebSearch} variant="outline" size="sm" className="min-w-0 px-2">
+                      <Globe className="h-4 w-4 mr-1 shrink-0" />
+                      <span className="truncate">Найти</span>
+                    </Button>
+                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="sm" className="min-w-0 px-2">
+                      <Upload className="h-4 w-4 mr-1 shrink-0" />
+                      <span className="truncate">Загрузить</span>
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Заметки для учителя</Label>
+                  <Textarea
+                    value={editedSlide.notes || ''}
+                    onChange={(e) => setEditedSlide({ ...editedSlide, notes: e.target.value })}
+                    rows={10}
+                    className="bg-muted/60 border-0 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 p-6 pt-3">
+                <Button variant="secondary" onClick={handleCancel}>Отменить</Button>
+                <Button onClick={handleSave} disabled={!editedSlide.title.trim()}>Сохранить</Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
 
       <Dialog open={webSearchOpen} onOpenChange={setWebSearchOpen}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
@@ -401,7 +371,6 @@ export const SlideEditor = ({
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </section>
   );
 };
-
