@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Presentation, Slide } from "@/types/presentation";
 import { SlideEditor } from "@/components/presentation/SlideEditor";
+import { SlidePreview } from "@/components/presentation/SlidePreview";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Download, Eye, Edit, Plus, ArrowLeft, GripVertical, Loader2, Play } from "lucide-react";
@@ -255,154 +256,116 @@ const Editor = () => {
 
   if (!presentation) return null;
 
+  const scrollToSlide = (id: string) => {
+    document.getElementById(`slide-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-app">
-      <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-10 shadow-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowLeaveDialog(true)}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Назад
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {presentation.config.topic}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {presentation.config.subject} • {presentation.config.grade} класс
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button
-                variant={isPreview ? "default" : "outline"}
-                size="sm"
+    <div className="min-h-screen bg-muted/50">
+      <header className="sticky top-0 z-10 bg-muted/80 backdrop-blur-md">
+        <div className="px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+          <nav className="flex items-center gap-2 text-sm min-w-0">
+            <button onClick={() => setShowLeaveDialog(true)} className="flex items-center gap-1.5 font-medium text-foreground hover:text-primary">
+              <ArrowLeft className="h-4 w-4" />
+              Главная
+            </button>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-muted-foreground truncate max-w-[22rem]">Презентация на тему «{presentation.config.topic}»</span>
+          </nav>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
               onClick={() => {
                 if (!isPreview) reachGoal('aip_preview');
                 setIsPreview(!isPreview);
               }}
-              >
-                {isPreview ? (
-                  <>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Вернуться в редактор
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Предпросмотр
-                  </>
-                )}
+            >
+              {isPreview ? <><Edit className="h-4 w-4 mr-2" />Вернуться в редактор</> : <><Eye className="h-4 w-4 mr-2" />Предпросмотр</>}
+            </Button>
+            {isPreview && (
+              <Button variant="secondary" onClick={() => { reachGoal('aip_present'); setIsPresenting(true); }}>
+                <Play className="h-4 w-4 mr-2 fill-current" />
+                Демонстрация
               </Button>
-              {isPreview && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => {
-                    reachGoal('aip_present');
-                    setIsPresenting(true);
-                  }}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Демонстрация
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport('pdf')}
-                disabled={isExporting}
-              >
-                {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExport('pptx')}
-                disabled={isExporting}
-              >
-                {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                PPTX
-              </Button>
-            </div>
+            )}
+            <Button variant="secondary" onClick={() => handleExport('pdf')} disabled={isExporting}>
+              {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              PDF
+            </Button>
+            <Button onClick={() => handleExport('pptx')} disabled={isExporting}>
+              {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              Скачать в PPTX
+            </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {isPreview ? (
-          <div className="max-w-4xl mx-auto space-y-8">
-            {presentation.slides.map((slide) => (
-              <Card key={slide.id} className="p-8 shadow-card">
-                <h2 className="text-3xl font-bold mb-4 text-foreground">{slide.title}</h2>
-                {slide.imageUrl && (
-                  <div className="mb-6 rounded-lg overflow-hidden">
-                    <img
-                      src={slide.imageUrl}
-                      alt={slide.title}
-                      className="w-full h-auto block"
-                    />
-                  </div>
+      <main className="px-2 md:px-3 pb-3">
+        <div className="rounded-3xl bg-card shadow-card p-5 md:p-8">
+          <div className="mb-6">
+            <h1 className="text-2xl md:text-3xl font-medium text-foreground">{presentation.config.topic}</h1>
+            <p className="mt-1 text-muted-foreground">
+              {presentation.config.subject} • {presentation.config.grade} класс
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-[15rem_minmax(0,1fr)]">
+            <aside className="hidden md:block">
+              <div className="sticky top-20 space-y-2 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
+                {!isPreview && (
+                  <Button variant="secondary" className="w-full" onClick={handleAddSlide}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Добавить слайд
+                  </Button>
                 )}
-                <div className="prose prose-lg max-w-none text-foreground [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkMath, remarkGfm]}
-                    rehypePlugins={[rehypeKatex]}
+                {presentation.slides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    draggable={!isPreview}
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                    onClick={() => scrollToSlide(slide.id)}
+                    className={`relative block w-full text-left rounded-xl transition hover:ring-2 hover:ring-primary ${draggedIndex === index ? 'opacity-50' : ''}`}
                   >
-                    {slide.content}
-                  </ReactMarkdown>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="max-w-5xl mx-auto space-y-6">
-            {presentation.slides.map((slide, index) => (
-              <div
-                key={slide.id}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-                className={`relative ${draggedIndex === index ? 'opacity-50' : ''}`}
-              >
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-8 cursor-move">
-                  <GripVertical className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <SlideEditor
-                  slide={slide}
-                  onUpdate={(updatedSlide) => handleUpdateSlide(index, updatedSlide)}
-                  onDelete={() => handleDeleteSlide(index)}
-                  onGenerateImage={handleGenerateImage}
-                  onRegenerateSlide={handleRegenerateSlide}
-                  isGeneratingImage={generatingImages.has(slide.id)}
-                  isRegeneratingSlide={regeneratingSlides.has(slide.id)}
-                  style={presentation.config.style}
-                  topic={presentation.config.topic}
-                  subject={presentation.config.subject}
-                  imageLoadingPhrases={imageLoadingPhrases[slide.id]}
-                  slideLoadingPhrases={slideLoadingPhrases[slide.id]}
-                />
+                    <SlidePreview slide={slide} compact />
+                    <span className="absolute bottom-2 left-2 rounded-md bg-muted px-2 py-0.5 text-xs text-foreground">{index + 1}</span>
+                  </button>
+                ))}
               </div>
-            ))}
-            
-            <Button
-              onClick={handleAddSlide}
-              variant="outline"
-              className="w-full py-8 border-dashed"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Добавить слайд
-            </Button>
+            </aside>
+
+            <div className="space-y-5">
+              {presentation.slides.map((slide, index) => (
+                <div key={slide.id} id={`slide-${slide.id}`} className="scroll-mt-20">
+                  <SlideEditor
+                    slide={slide}
+                    index={index}
+                    total={presentation.slides.length}
+                    readOnly={isPreview}
+                    onUpdate={(updatedSlide) => handleUpdateSlide(index, updatedSlide)}
+                    onDelete={() => handleDeleteSlide(index)}
+                    onGenerateImage={handleGenerateImage}
+                    onRegenerateSlide={handleRegenerateSlide}
+                    isGeneratingImage={generatingImages.has(slide.id)}
+                    isRegeneratingSlide={regeneratingSlides.has(slide.id)}
+                    style={presentation.config.style}
+                    topic={presentation.config.topic}
+                    subject={presentation.config.subject}
+                    imageLoadingPhrases={imageLoadingPhrases[slide.id]}
+                    slideLoadingPhrases={slideLoadingPhrases[slide.id]}
+                  />
+                </div>
+              ))}
+              {!isPreview && (
+                <Button onClick={handleAddSlide} variant="outline" className="w-full py-8 border-dashed md:hidden">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Добавить слайд
+                </Button>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </main>
 
       {isPresenting && (
