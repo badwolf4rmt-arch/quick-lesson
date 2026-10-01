@@ -76,7 +76,7 @@ async function getSearchQueries(slideTitle: string, slideContent: string, topic:
         'X-Title': 'Image Search Keywords',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-5-mini',
+        model: 'openai/gpt-6-luna',
         max_tokens: 300,
         reasoning: { effort: 'minimal' },
         messages: [
