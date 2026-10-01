@@ -216,6 +216,7 @@ export async function exportToPPTX(presentation: Presentation): Promise<void> {
   for (const slide of presentation.slides) {
     const pSlide = pptx.addSlide();
     pSlide.background = { color: colors.bg };
+    if (slide.notes) pSlide.addNotes(slide.notes);
 
     // Title
     pSlide.addText(slide.title, {

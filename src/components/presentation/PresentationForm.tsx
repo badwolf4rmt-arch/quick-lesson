@@ -349,6 +349,18 @@ export const PresentationForm = ({ onSubmit, isLoading }: PresentationFormProps)
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="lessonPlan">План урока</Label>
+                <Textarea
+                  id="lessonPlan"
+                  placeholder="Вставьте план урока — презентация будет сопровождать его, а не повторять дословно"
+                  value={config.lessonPlan}
+                  onChange={(e) => setConfig({ ...config, lessonPlan: e.target.value })}
+                  onBlur={() => { if (config.lessonPlan) trackInput('lessonPlan'); }}
+                  rows={5}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label>Прикрепить файлы</Label>
                 <p className="text-xs text-muted-foreground">
                   TXT, MD, PDF, DOCX, PPTX, изображения (до 10 МБ, не более {MAX_FILES} файлов). Файл передаётся в ИИ как есть — без локальной обработки.

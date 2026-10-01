@@ -16,6 +16,7 @@ export interface PresentationConfig {
   slideCount: number;
   additionalPrompt?: string;
   mainText?: string;
+  lessonPlan?: string;
   attachments?: Array<{
     name: string;
     mimeType: string;

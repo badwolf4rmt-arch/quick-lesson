@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Image, RefreshCw, Trash2, Upload, X, Wand2, Globe, Search, Loader2 } from "lucide-react";
+import { Image, RefreshCw, Trash2, Upload, X, Wand2, Globe, Search, Loader2, NotebookPen } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { invokeBackendFunction } from "@/utils/backendFunctions";
 import ReactMarkdown from "react-markdown";
@@ -196,6 +196,35 @@ export const SlideEditor = ({
               </ReactMarkdown>
             </div>
           )}
+
+          <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <NotebookPen className="h-4 w-4 text-primary" />
+              Заметки для учителя
+            </div>
+            {isEditing ? (
+              <Textarea
+                value={editedSlide.notes || ''}
+                onChange={(e) => setEditedSlide({ ...editedSlide, notes: e.target.value })}
+                rows={8}
+                className="w-full text-sm"
+              />
+            ) : slide.notes ? (
+              <div className="space-y-3 text-sm">
+                {slide.notes.split(/\n\s*\n/).map((block, i) => {
+                  const [heading, ...rest] = block.split('\n');
+                  return (
+                    <div key={i}>
+                      <p className="font-semibold text-foreground">{heading}</p>
+                      <p className="text-muted-foreground whitespace-pre-line">{rest.join('\n')}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Заметок нет</p>
+            )}
+          </div>
 
           {isEditing ? (
             <div className="flex gap-2">
