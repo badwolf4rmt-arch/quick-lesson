@@ -4,6 +4,7 @@ export interface Slide {
   content: string;
   imagePrompt: string;
   imageUrl?: string;
+  needsImage?: boolean;
   notes?: string;
 }
 
