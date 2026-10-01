@@ -148,7 +148,6 @@ export const SlideEditor = ({
     reader.readAsDataURL(file);
   };
 
-  if (isRegeneratingSlide) {
 
   const iconBtn = "h-9 w-9 rounded-full text-foreground/70 hover:text-primary hover:bg-card";
 
